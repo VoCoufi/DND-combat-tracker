@@ -47,7 +47,7 @@ Currently, the status effect feature is simplified and non-functional. DMs frequ
 ---
 
 ### 2. Death Saves Tracking
-**Status**: ⚪ Planned
+**Status**: 🟢 Completed
 **Difficulty**: Medium
 **Estimated Effort**: 2-3 days
 
