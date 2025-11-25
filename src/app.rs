@@ -1,5 +1,5 @@
 use crate::combat::CombatEncounter;
-use crate::models::{Combatant, ConditionType, DeathSaveOutcome, StatusEffect};
+use crate::models::{Combatant, ConcentrationInfo, ConditionType, DeathSaveOutcome, StatusEffect};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum InputMode {
@@ -10,6 +10,9 @@ pub enum InputMode {
     AddingStatus(SelectionState),
     SelectingCondition(ConditionSelectionState),
     RollingDeathSave(SelectionState),
+    ConcentrationTarget(SelectionState),
+    ApplyingConcentration(AddConcentrationState),
+    ConcentrationCheck(ConcentrationCheckState),
     Removing(SelectionState),
 }
 
@@ -54,6 +57,34 @@ impl Default for SelectionState {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ConditionSelectionState {
     pub combatant_index: usize,
+    pub input: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct AddConcentrationState {
+    pub combatant_index: usize,
+    pub step: usize, // 0: spell name, 1: duration, 2: con mod
+    pub spell_name: String,
+    pub duration: String,
+    pub con_mod: String,
+}
+
+impl Default for AddConcentrationState {
+    fn default() -> Self {
+        Self {
+            combatant_index: 0,
+            step: 0,
+            spell_name: String::new(),
+            duration: String::new(),
+            con_mod: String::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConcentrationCheckState {
+    pub combatant_index: usize,
+    pub dc: i32,
     pub input: String,
 }
 
@@ -141,6 +172,15 @@ impl App {
         self.clear_message();
     }
 
+    pub fn start_concentration_target(&mut self) {
+        if self.encounter.combatants.is_empty() {
+            self.set_message("No combatants to set concentration on!".to_string());
+            return;
+        }
+        self.input_mode = InputMode::ConcentrationTarget(SelectionState::default());
+        self.clear_message();
+    }
+
     pub fn cancel_input(&mut self) {
         self.input_mode = InputMode::Normal;
         self.clear_message();
@@ -174,6 +214,7 @@ impl App {
 
         let combatant = &mut self.encounter.combatants[index];
         let was_unconscious = combatant.is_unconscious();
+        let had_concentration = combatant.concentration.clone();
         combatant.take_damage(damage);
         let name = combatant.name.clone();
         let hp = combatant.hp_current;
@@ -200,6 +241,21 @@ impl App {
                 }
             }
         }
+        if combatant.is_unconscious() {
+            combatant.clear_concentration();
+        } else if let Some(info) = had_concentration {
+            let dc = std::cmp::max(10, damage / 2);
+            self.input_mode = InputMode::ConcentrationCheck(ConcentrationCheckState {
+                combatant_index: index,
+                dc,
+                input: String::new(),
+            });
+            self.set_message(format!(
+                "{} took damage while concentrating on {}. Roll CON save (DC {}).",
+                name, info.spell_name, dc
+            ));
+            return Ok(());
+        }
 
         self.input_mode = InputMode::Normal;
         let base = format!("{} took {} damage (HP: {})", name, damage, hp);
@@ -223,6 +279,7 @@ impl App {
 
         if combatant.hp_current > 0 {
             combatant.clear_death_saves();
+            // healing to positive HP keeps concentration as-is
         }
 
         self.input_mode = InputMode::Normal;
@@ -320,6 +377,72 @@ impl App {
         };
 
         self.set_message(message);
+        Ok(())
+    }
+
+    pub fn complete_apply_concentration(
+        &mut self,
+        state: AddConcentrationState,
+    ) -> Result<(), String> {
+        if state.combatant_index >= self.encounter.combatants.len() {
+            return Err("Invalid combatant index".to_string());
+        }
+
+        let duration = state
+            .duration
+            .parse::<i32>()
+            .map_err(|_| "Invalid duration".to_string())?;
+        let con_mod = state
+            .con_mod
+            .parse::<i32>()
+            .map_err(|_| "Invalid constitution modifier".to_string())?;
+
+        if state.spell_name.trim().is_empty() {
+            return Err("Spell name cannot be empty".to_string());
+        }
+
+        let info = ConcentrationInfo::new(state.spell_name.clone(), duration, con_mod);
+        let combatant = &mut self.encounter.combatants[state.combatant_index];
+        let name = combatant.name.clone();
+        combatant.set_concentration(info);
+        self.input_mode = InputMode::Normal;
+        self.set_message(format!(
+            "{} starts concentrating on {}.",
+            name, state.spell_name
+        ));
+        Ok(())
+    }
+
+    pub fn complete_concentration_check(
+        &mut self,
+        state: ConcentrationCheckState,
+        roll_total: i32,
+    ) -> Result<(), String> {
+        if state.combatant_index >= self.encounter.combatants.len() {
+            return Err("Invalid combatant index".to_string());
+        }
+
+        let combatant = &mut self.encounter.combatants[state.combatant_index];
+        let Some(info) = combatant.concentration.clone() else {
+            return Err("Combatant is not concentrating".to_string());
+        };
+
+        let name = combatant.name.clone();
+        self.input_mode = InputMode::Normal;
+
+        if roll_total >= state.dc {
+            self.set_message(format!(
+                "{} maintains concentration on {} (roll {} vs DC {}).",
+                name, info.spell_name, roll_total, state.dc
+            ));
+        } else {
+            combatant.clear_concentration();
+            self.set_message(format!(
+                "{} fails concentration on {} (roll {} vs DC {}).",
+                name, info.spell_name, roll_total, state.dc
+            ));
+        }
+
         Ok(())
     }
 }

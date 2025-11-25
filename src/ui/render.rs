@@ -6,7 +6,10 @@ use ratatui::{
     widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap},
 };
 
-use crate::app::{AddCombatantState, App, ConditionSelectionState, InputMode, SelectionState};
+use crate::app::{
+    AddCombatantState, AddConcentrationState, App, ConcentrationCheckState,
+    ConditionSelectionState, InputMode, SelectionState,
+};
 use crate::models::{Combatant, ConditionType};
 
 pub fn render(f: &mut Frame, app: &App) {
@@ -50,6 +53,11 @@ pub fn render(f: &mut Frame, app: &App) {
         InputMode::RollingDeathSave(state) => {
             render_selection_modal(f, state, "Death Save", "Enter d20 roll:", app)
         }
+        InputMode::ConcentrationTarget(state) => {
+            render_selection_modal(f, state, "Set Concentration", "Select combatant:", app)
+        }
+        InputMode::ApplyingConcentration(state) => render_add_concentration_modal(f, state, app),
+        InputMode::ConcentrationCheck(state) => render_concentration_check(f, state, app),
         InputMode::Removing(state) => render_selection_modal(
             f,
             state,
@@ -116,6 +124,7 @@ fn render_combatants(f: &mut Frame, area: Rect, app: &App) {
                 Span::raw(" "),
                 Span::styled(format!("{}/{}", c.hp_current, c.hp_max), hp_style),
                 death_save_span(c),
+                concentration_span(c),
                 Span::raw(format!("  AC: {}  ", c.armor_class)),
                 Span::styled(status_str, Style::default().fg(Color::Yellow)),
             ]);
@@ -137,7 +146,7 @@ fn render_combatants(f: &mut Frame, area: Rect, app: &App) {
 fn render_commands(f: &mut Frame, area: Rect, app: &App) {
     let commands = match app.input_mode {
         InputMode::Normal => {
-            "[n] Next Turn  [d] Damage  [h] Heal  [s] Status  [v] Death Save  [a] Add  [r] Remove  [q] Quit"
+            "[n] Next Turn  [d] Damage  [h] Heal  [s] Status  [v] Death Save  [c] Concentration  [a] Add  [r] Remove  [q] Quit"
         }
         _ => "[Esc] Cancel",
     };
@@ -410,4 +419,129 @@ fn death_save_span(combatant: &Combatant) -> Span<'static> {
     } else {
         Span::raw("")
     }
+}
+
+fn concentration_span(combatant: &Combatant) -> Span<'static> {
+    if let Some(info) = &combatant.concentration {
+        let mut text = format!(" [Conc: {}", info.spell_name);
+        if info.duration_remaining > 0 {
+            text.push_str(&format!(" ({}r)", info.duration_remaining));
+        }
+        text.push(']');
+        Span::styled(
+            text,
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::ITALIC),
+        )
+    } else {
+        Span::raw("")
+    }
+}
+
+fn render_add_concentration_modal(f: &mut Frame, state: &AddConcentrationState, app: &App) {
+    let area = centered_rect(60, 50, f.area());
+    let combatant_name = app
+        .encounter
+        .combatants
+        .get(state.combatant_index)
+        .map(|c| c.name.as_str())
+        .unwrap_or("Unknown");
+
+    let prompts = ["Spell name:", "Duration (rounds):", "CON modifier:"];
+    let values = [&state.spell_name, &state.duration, &state.con_mod];
+
+    let mut lines = vec![Line::from(Span::styled(
+        format!("Set concentration for {}", combatant_name),
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    ))];
+    lines.push(Line::from(""));
+
+    for (i, prompt) in prompts.iter().enumerate() {
+        if i < state.step {
+            lines.push(Line::from(vec![
+                Span::raw(*prompt),
+                Span::raw(" "),
+                Span::styled(values[i].clone(), Style::default().fg(Color::Green)),
+            ]));
+        } else if i == state.step {
+            lines.push(Line::from(vec![Span::styled(
+                *prompt,
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]));
+            lines.push(Line::from(vec![
+                Span::raw("> "),
+                Span::styled(values[i].clone(), Style::default().fg(Color::White)),
+                Span::styled(
+                    "_",
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::SLOW_BLINK),
+                ),
+            ]));
+        } else {
+            lines.push(Line::from(Span::styled(
+                *prompt,
+                Style::default().fg(Color::DarkGray),
+            )));
+        }
+    }
+
+    let block = Block::default()
+        .title(" Set Concentration ")
+        .borders(Borders::ALL)
+        .style(Style::default().fg(Color::Yellow));
+
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
+
+    f.render_widget(Clear, area);
+    f.render_widget(paragraph, area);
+}
+
+fn render_concentration_check(f: &mut Frame, state: &ConcentrationCheckState, app: &App) {
+    let area = centered_rect(60, 40, f.area());
+    let combatant_name = app
+        .encounter
+        .combatants
+        .get(state.combatant_index)
+        .map(|c| c.name.as_str())
+        .unwrap_or("Unknown");
+
+    let lines = vec![
+        Line::from(Span::styled(
+            format!(
+                "Concentration check for {} (DC {})",
+                combatant_name, state.dc
+            ),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("Enter total CON save roll:"),
+        Line::from(""),
+        Line::from(vec![
+            Span::raw("> "),
+            Span::styled(state.input.clone(), Style::default().fg(Color::White)),
+            Span::styled(
+                "_",
+                Style::default()
+                    .fg(Color::White)
+                    .add_modifier(Modifier::SLOW_BLINK),
+            ),
+        ]),
+    ];
+
+    let block = Block::default()
+        .title(" Concentration Check ")
+        .borders(Borders::ALL)
+        .style(Style::default().fg(Color::Yellow));
+
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
+
+    f.render_widget(Clear, area);
+    f.render_widget(paragraph, area);
 }

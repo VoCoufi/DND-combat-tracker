@@ -1,4 +1,7 @@
-use crate::app::{App, ConditionSelectionState, InputMode, SelectionState};
+use crate::app::{
+    AddConcentrationState, App, ConcentrationCheckState, ConditionSelectionState, InputMode,
+    SelectionState,
+};
 use crossterm::event::{KeyCode, KeyEvent};
 
 pub fn handle_key_event(app: &mut App, key: KeyEvent) {
@@ -31,6 +34,14 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
                 app.input_mode = InputMode::Normal;
             }
         }),
+        InputMode::ConcentrationTarget(_) => handle_selection_mode(app, key, |app, idx, _| {
+            app.input_mode = InputMode::ApplyingConcentration(AddConcentrationState {
+                combatant_index: idx,
+                ..Default::default()
+            });
+        }),
+        InputMode::ApplyingConcentration(state) => handle_add_concentration_mode(app, key, state),
+        InputMode::ConcentrationCheck(state) => handle_concentration_check_mode(app, key, state),
         InputMode::Removing(_) => handle_removing_mode(app, key),
     }
 }
@@ -47,6 +58,7 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
         KeyCode::Char('h') => app.start_healing(),
         KeyCode::Char('s') => app.start_adding_status(),
         KeyCode::Char('v') => app.start_rolling_death_save(),
+        KeyCode::Char('c') => app.start_concentration_target(),
         KeyCode::Char('r') => app.start_removing(),
         _ => {}
     }
@@ -125,10 +137,11 @@ fn handle_selection_mode<F>(app: &mut App, key: KeyEvent, on_confirm: F)
 where
     F: FnOnce(&mut App, usize, String),
 {
-    let (selected_index, mut input) = match &app.input_mode {
-        InputMode::DealingDamage(state) => (state.selected_index, state.input.clone()),
-        InputMode::Healing(state) => (state.selected_index, state.input.clone()),
-        InputMode::RollingDeathSave(state) => (state.selected_index, state.input.clone()),
+    let (selected_index, mut input, allow_empty_confirm) = match &app.input_mode {
+        InputMode::DealingDamage(state) => (state.selected_index, state.input.clone(), false),
+        InputMode::Healing(state) => (state.selected_index, state.input.clone(), false),
+        InputMode::RollingDeathSave(state) => (state.selected_index, state.input.clone(), false),
+        InputMode::ConcentrationTarget(state) => (state.selected_index, state.input.clone(), true),
         _ => return,
     };
 
@@ -151,7 +164,7 @@ where
             update_selection_state(app, new_index, input);
         }
         KeyCode::Enter => {
-            if !input.is_empty() {
+            if allow_empty_confirm || !input.is_empty() {
                 on_confirm(app, selected_index, input);
             }
         }
@@ -180,6 +193,7 @@ fn update_selection_state(app: &mut App, index: usize, input: String) {
         InputMode::Healing(_) => InputMode::Healing(new_state),
         InputMode::AddingStatus(_) => InputMode::AddingStatus(new_state),
         InputMode::RollingDeathSave(_) => InputMode::RollingDeathSave(new_state),
+        InputMode::ConcentrationTarget(_) => InputMode::ConcentrationTarget(new_state),
         InputMode::Removing(_) => InputMode::Removing(new_state),
         _ => app.input_mode.clone(),
     };
@@ -269,6 +283,83 @@ fn handle_condition_selection_mode(app: &mut App, key: KeyEvent, state: Conditio
 
             let condition = crate::models::ConditionType::all()[condition_idx];
             let _ = app.complete_add_status(combatant_index, condition, duration);
+        }
+        _ => {}
+    }
+}
+
+fn handle_add_concentration_mode(app: &mut App, key: KeyEvent, state: AddConcentrationState) {
+    let mut state = state;
+    match key.code {
+        KeyCode::Esc => app.cancel_input(),
+        KeyCode::Enter => {
+            if state.step < 2 {
+                state.step += 1;
+                app.input_mode = InputMode::ApplyingConcentration(state);
+            } else if let Err(e) = app.complete_apply_concentration(state) {
+                app.set_message(e);
+                app.input_mode = InputMode::Normal;
+            }
+        }
+        KeyCode::Backspace => {
+            match state.step {
+                0 => {
+                    state.spell_name.pop();
+                }
+                1 => {
+                    state.duration.pop();
+                }
+                2 => {
+                    state.con_mod.pop();
+                }
+                _ => {}
+            }
+            app.input_mode = InputMode::ApplyingConcentration(state);
+        }
+        KeyCode::Char(c) => {
+            match state.step {
+                0 => state.spell_name.push(c),
+                1 => {
+                    if c.is_ascii_digit() {
+                        state.duration.push(c);
+                    }
+                }
+                2 => {
+                    if c.is_ascii_digit() || c == '-' {
+                        state.con_mod.push(c);
+                    }
+                }
+                _ => {}
+            }
+            app.input_mode = InputMode::ApplyingConcentration(state);
+        }
+        _ => {}
+    }
+}
+
+fn handle_concentration_check_mode(app: &mut App, key: KeyEvent, state: ConcentrationCheckState) {
+    let mut input = state.input.clone();
+    match key.code {
+        KeyCode::Esc => app.cancel_input(),
+        KeyCode::Backspace => {
+            input.pop();
+            app.input_mode =
+                InputMode::ConcentrationCheck(ConcentrationCheckState { input, ..state });
+        }
+        KeyCode::Char(c) => {
+            if c.is_ascii_digit() {
+                input.push(c);
+                app.input_mode =
+                    InputMode::ConcentrationCheck(ConcentrationCheckState { input, ..state });
+            }
+        }
+        KeyCode::Enter => {
+            if let Ok(total) = input.parse::<i32>() {
+                let _ = app.complete_concentration_check(state.clone(), total);
+            } else {
+                app.set_message("Invalid roll total".to_string());
+                app.input_mode = InputMode::Normal;
+            }
         }
         _ => {}
     }

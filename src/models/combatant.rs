@@ -1,4 +1,4 @@
-use super::{DeathSaveOutcome, DeathSaves, status::StatusEffect};
+use super::{ConcentrationInfo, DeathSaveOutcome, DeathSaves, status::StatusEffect};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -11,6 +11,7 @@ pub struct Combatant {
     pub is_player: bool,
     pub status_effects: Vec<StatusEffect>,
     pub death_saves: Option<DeathSaves>,
+    pub concentration: Option<ConcentrationInfo>,
 }
 
 impl Combatant {
@@ -30,6 +31,7 @@ impl Combatant {
             is_player,
             status_effects: Vec::new(),
             death_saves: None,
+            concentration: None,
         }
     }
 
@@ -124,5 +126,13 @@ impl Combatant {
         } else {
             DeathSaveOutcome::Ongoing
         }
+    }
+
+    pub fn clear_concentration(&mut self) {
+        self.concentration = None;
+    }
+
+    pub fn set_concentration(&mut self, info: ConcentrationInfo) {
+        self.concentration = Some(info);
     }
 }
