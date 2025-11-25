@@ -8,7 +8,7 @@ pub enum InputMode {
     DealingDamage(SelectionState),
     Healing(SelectionState),
     AddingStatus(SelectionState),
-    SelectingCondition(usize), // Combatant index
+    SelectingCondition(ConditionSelectionState),
     Removing(SelectionState),
 }
 
@@ -48,6 +48,12 @@ impl Default for SelectionState {
             input: String::new(),
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConditionSelectionState {
+    pub combatant_index: usize,
+    pub input: String,
 }
 
 pub struct App {

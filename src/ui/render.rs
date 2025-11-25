@@ -6,7 +6,7 @@ use ratatui::{
     widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap},
 };
 
-use crate::app::{AddCombatantState, App, InputMode, SelectionState};
+use crate::app::{AddCombatantState, App, ConditionSelectionState, InputMode, SelectionState};
 use crate::models::{Combatant, ConditionType};
 
 pub fn render(f: &mut Frame, app: &App) {
@@ -46,7 +46,7 @@ pub fn render(f: &mut Frame, app: &App) {
         InputMode::AddingStatus(state) => {
             render_selection_modal(f, state, "Add Status Effect", "Select combatant:", app)
         }
-        InputMode::SelectingCondition(index) => render_condition_selection(f, *index, app),
+        InputMode::SelectingCondition(state) => render_condition_selection(f, state, app),
         InputMode::Removing(state) => render_selection_modal(
             f,
             state,
@@ -285,13 +285,13 @@ fn render_selection_modal(
     f.render_widget(paragraph, area);
 }
 
-fn render_condition_selection(f: &mut Frame, combatant_index: usize, app: &App) {
+fn render_condition_selection(f: &mut Frame, state: &ConditionSelectionState, app: &App) {
     let area = centered_rect(50, 60, f.area());
 
     let combatant_name = app
         .encounter
         .combatants
-        .get(combatant_index)
+        .get(state.combatant_index)
         .map(|c| c.name.as_str())
         .unwrap_or("Unknown");
 
@@ -317,6 +317,16 @@ fn render_condition_selection(f: &mut Frame, combatant_index: usize, app: &App) 
     lines.push(Line::from(Span::raw(
         "Enter number and duration (e.g., 1 3):",
     )));
+    lines.push(Line::from(vec![
+        Span::raw("> "),
+        Span::styled(state.input.clone(), Style::default().fg(Color::White)),
+        Span::styled(
+            "_",
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::SLOW_BLINK),
+        ),
+    ]));
 
     let block = Block::default()
         .title(" Select Condition ")

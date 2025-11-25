@@ -1,8 +1,8 @@
-use crate::app::{App, InputMode, SelectionState};
+use crate::app::{App, ConditionSelectionState, InputMode, SelectionState};
 use crossterm::event::{KeyCode, KeyEvent};
 
 pub fn handle_key_event(app: &mut App, key: KeyEvent) {
-    match &app.input_mode {
+    match app.input_mode.clone() {
         InputMode::Normal => handle_normal_mode(app, key),
         InputMode::AddingCombatant(_) => handle_add_combatant_mode(app, key),
         InputMode::DealingDamage(_) => handle_selection_mode(app, key, |app, idx, input| {
@@ -22,9 +22,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
             }
         }),
         InputMode::AddingStatus(_) => handle_status_selection_mode(app, key),
-        InputMode::SelectingCondition(combatant_index) => {
-            handle_condition_selection_mode(app, key, *combatant_index)
-        }
+        InputMode::SelectingCondition(state) => handle_condition_selection_mode(app, key, state),
         InputMode::Removing(_) => handle_removing_mode(app, key),
     }
 }
@@ -200,20 +198,66 @@ fn handle_status_selection_mode(app: &mut App, key: KeyEvent) {
                 update_selection_state(app, new_index, String::new());
             }
             KeyCode::Enter => {
-                app.input_mode = InputMode::SelectingCondition(selected_index);
+                app.input_mode = InputMode::SelectingCondition(ConditionSelectionState {
+                    combatant_index: selected_index,
+                    input: String::new(),
+                });
             }
             _ => {}
         }
     }
 }
 
-fn handle_condition_selection_mode(app: &mut App, key: KeyEvent, _combatant_index: usize) {
+fn handle_condition_selection_mode(app: &mut App, key: KeyEvent, state: ConditionSelectionState) {
+    let mut input = state.input;
+    let combatant_index = state.combatant_index;
+
     match key.code {
         KeyCode::Esc => app.cancel_input(),
-        KeyCode::Char(_c) => {
-            // For now, just cancel - this is a simplified implementation
-            // A full implementation would collect input for condition selection
-            app.cancel_input();
+        KeyCode::Backspace => {
+            input.pop();
+            app.input_mode = InputMode::SelectingCondition(ConditionSelectionState {
+                combatant_index,
+                input,
+            });
+        }
+        KeyCode::Char(c) => {
+            if c.is_ascii_digit() || c == ' ' {
+                // Allow only one space separator
+                if c != ' ' || !input.contains(' ') {
+                    input.push(c);
+                    app.input_mode = InputMode::SelectingCondition(ConditionSelectionState {
+                        combatant_index,
+                        input,
+                    });
+                }
+            }
+        }
+        KeyCode::Enter => {
+            let parts: Vec<&str> = input.split_whitespace().collect();
+            if parts.len() != 2 {
+                app.set_message("Enter condition number and duration (e.g., 1 3)".to_string());
+                return;
+            }
+
+            let condition_idx = match parts[0].parse::<usize>() {
+                Ok(idx) if idx >= 1 && idx <= crate::models::ConditionType::all().len() => idx - 1,
+                _ => {
+                    app.set_message("Invalid condition number".to_string());
+                    return;
+                }
+            };
+
+            let duration = match parts[1].parse::<i32>() {
+                Ok(d) if d > 0 => d,
+                _ => {
+                    app.set_message("Duration must be a positive number".to_string());
+                    return;
+                }
+            };
+
+            let condition = crate::models::ConditionType::all()[condition_idx];
+            let _ = app.complete_add_status(combatant_index, condition, duration);
         }
         _ => {}
     }
