@@ -423,11 +423,7 @@ fn death_save_span(combatant: &Combatant) -> Span<'static> {
 
 fn concentration_span(combatant: &Combatant) -> Span<'static> {
     if let Some(info) = &combatant.concentration {
-        let mut text = format!(" [Conc: {}", info.spell_name);
-        if info.duration_remaining > 0 {
-            text.push_str(&format!(" ({}r)", info.duration_remaining));
-        }
-        text.push(']');
+        let text = format!(" [Conc: {}]", info.spell_name);
         Span::styled(
             text,
             Style::default()
@@ -448,8 +444,8 @@ fn render_add_concentration_modal(f: &mut Frame, state: &AddConcentrationState, 
         .map(|c| c.name.as_str())
         .unwrap_or("Unknown");
 
-    let prompts = ["Spell name:", "Duration (rounds):", "CON modifier:"];
-    let values = [&state.spell_name, &state.duration, &state.con_mod];
+    let prompts = ["Spell name:", "CON modifier:"];
+    let values = [&state.spell_name, &state.con_mod];
 
     let mut lines = vec![Line::from(Span::styled(
         format!("Set concentration for {}", combatant_name),

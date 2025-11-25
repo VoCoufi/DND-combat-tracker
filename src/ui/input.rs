@@ -293,7 +293,7 @@ fn handle_add_concentration_mode(app: &mut App, key: KeyEvent, state: AddConcent
     match key.code {
         KeyCode::Esc => app.cancel_input(),
         KeyCode::Enter => {
-            if state.step < 2 {
+            if state.step < 1 {
                 state.step += 1;
                 app.input_mode = InputMode::ApplyingConcentration(state);
             } else if let Err(e) = app.complete_apply_concentration(state) {
@@ -307,9 +307,6 @@ fn handle_add_concentration_mode(app: &mut App, key: KeyEvent, state: AddConcent
                     state.spell_name.pop();
                 }
                 1 => {
-                    state.duration.pop();
-                }
-                2 => {
                     state.con_mod.pop();
                 }
                 _ => {}
@@ -320,11 +317,6 @@ fn handle_add_concentration_mode(app: &mut App, key: KeyEvent, state: AddConcent
             match state.step {
                 0 => state.spell_name.push(c),
                 1 => {
-                    if c.is_ascii_digit() {
-                        state.duration.push(c);
-                    }
-                }
-                2 => {
                     if c.is_ascii_digit() || c == '-' {
                         state.con_mod.push(c);
                     }

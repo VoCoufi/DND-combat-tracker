@@ -63,9 +63,8 @@ pub struct ConditionSelectionState {
 #[derive(Debug, Clone, PartialEq)]
 pub struct AddConcentrationState {
     pub combatant_index: usize,
-    pub step: usize, // 0: spell name, 1: duration, 2: con mod
+    pub step: usize, // 0: spell name, 1: con mod
     pub spell_name: String,
-    pub duration: String,
     pub con_mod: String,
 }
 
@@ -75,7 +74,6 @@ impl Default for AddConcentrationState {
             combatant_index: 0,
             step: 0,
             spell_name: String::new(),
-            duration: String::new(),
             con_mod: String::new(),
         }
     }
@@ -388,10 +386,6 @@ impl App {
             return Err("Invalid combatant index".to_string());
         }
 
-        let duration = state
-            .duration
-            .parse::<i32>()
-            .map_err(|_| "Invalid duration".to_string())?;
         let con_mod = state
             .con_mod
             .parse::<i32>()
@@ -401,7 +395,7 @@ impl App {
             return Err("Spell name cannot be empty".to_string());
         }
 
-        let info = ConcentrationInfo::new(state.spell_name.clone(), duration, con_mod);
+        let info = ConcentrationInfo::new(state.spell_name.clone(), con_mod);
         let combatant = &mut self.encounter.combatants[state.combatant_index];
         let name = combatant.name.clone();
         combatant.set_concentration(info);
