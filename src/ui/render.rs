@@ -7,7 +7,7 @@ use ratatui::{
 };
 
 use crate::app::{
-    AddCombatantState, AddConcentrationState, App, ConcentrationCheckState,
+    AddCombatantState, AddConcentrationState, App, ClearAction, ConcentrationCheckState,
     ConditionSelectionState, InputMode, SelectionState,
 };
 use crate::models::{Combatant, ConditionType};
@@ -58,8 +58,12 @@ pub fn render(f: &mut Frame, app: &App) {
         }
         InputMode::ApplyingConcentration(state) => render_add_concentration_modal(f, state, app),
         InputMode::ConcentrationCheck(state) => render_concentration_check(f, state, app),
+        InputMode::ClearActionSelection(choice) => render_clear_choice_modal(f, choice),
         InputMode::ClearingConcentration(state) => {
             render_selection_modal(f, state, "Clear Concentration", "Select combatant:", app)
+        }
+        InputMode::ClearingStatus(state) => {
+            render_selection_modal(f, state, "Clear Status Effects", "Select combatant:", app)
         }
         InputMode::Removing(state) => render_selection_modal(
             f,
@@ -149,7 +153,7 @@ fn render_combatants(f: &mut Frame, area: Rect, app: &App) {
 fn render_commands(f: &mut Frame, area: Rect, app: &App) {
     let commands = match app.input_mode {
         InputMode::Normal => {
-            "[n] Next Turn  [d] Damage  [h] Heal  [s] Status  [v] Death Save  [c] Concentration  [x] Clear Conc  [a] Add  [r] Remove  [q] Quit"
+            "[n] Next Turn  [d] Damage  [h] Heal  [s] Status  [v] Death Save  [c] Concentration  [x] Clear  [a] Add  [r] Remove  [q] Quit"
         }
         _ => "[Esc] Cancel",
     };
@@ -536,6 +540,48 @@ fn render_concentration_check(f: &mut Frame, state: &ConcentrationCheckState, ap
 
     let block = Block::default()
         .title(" Concentration Check ")
+        .borders(Borders::ALL)
+        .style(Style::default().fg(Color::Yellow));
+
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
+
+    f.render_widget(Clear, area);
+    f.render_widget(paragraph, area);
+}
+
+fn render_clear_choice_modal(f: &mut Frame, choice: &ClearAction) {
+    let area = centered_rect(40, 40, f.area());
+    let options = [
+        (ClearAction::Concentration, "Clear Concentration"),
+        (ClearAction::StatusEffects, "Clear Status Effects"),
+    ];
+
+    let mut lines = vec![Line::from(Span::styled(
+        "Choose what to clear:",
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    ))];
+    lines.push(Line::from(""));
+
+    for (opt, label) in &options {
+        let selected = std::mem::discriminant(opt) == std::mem::discriminant(choice);
+        let style = if selected {
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::White)
+        };
+        let prefix = if selected { "> " } else { "  " };
+        lines.push(Line::from(Span::styled(
+            format!("{}{}", prefix, label),
+            style,
+        )));
+    }
+
+    let block = Block::default()
+        .title(" Clear Menu ")
         .borders(Borders::ALL)
         .style(Style::default().fg(Color::Yellow));
 

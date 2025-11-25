@@ -1,6 +1,6 @@
 use crate::app::{
-    AddConcentrationState, App, ConcentrationCheckState, ConditionSelectionState, InputMode,
-    SelectionState,
+    AddConcentrationState, App, ClearAction, ConcentrationCheckState, ConditionSelectionState,
+    InputMode, SelectionState,
 };
 use crossterm::event::{KeyCode, KeyEvent};
 
@@ -45,6 +45,10 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
         InputMode::ClearingConcentration(_) => handle_selection_mode(app, key, |app, idx, _| {
             let _ = app.complete_clear_concentration(idx);
         }),
+        InputMode::ClearActionSelection(choice) => handle_clear_choice_mode(app, key, choice),
+        InputMode::ClearingStatus(_) => handle_selection_mode(app, key, |app, idx, _| {
+            let _ = app.complete_clear_status_effects(idx);
+        }),
         InputMode::Removing(_) => handle_removing_mode(app, key),
     }
 }
@@ -62,7 +66,7 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
         KeyCode::Char('s') => app.start_adding_status(),
         KeyCode::Char('v') => app.start_rolling_death_save(),
         KeyCode::Char('c') => app.start_concentration_target(),
-        KeyCode::Char('x') => app.start_clearing_concentration(),
+        KeyCode::Char('x') => app.start_clear_choice(),
         KeyCode::Char('r') => app.start_removing(),
         _ => {}
     }
@@ -149,6 +153,7 @@ where
         InputMode::ClearingConcentration(state) => {
             (state.selected_index, state.input.clone(), true)
         }
+        InputMode::ClearingStatus(state) => (state.selected_index, state.input.clone(), true),
         _ => return,
     };
 
@@ -202,6 +207,7 @@ fn update_selection_state(app: &mut App, index: usize, input: String) {
         InputMode::RollingDeathSave(_) => InputMode::RollingDeathSave(new_state),
         InputMode::ConcentrationTarget(_) => InputMode::ConcentrationTarget(new_state),
         InputMode::ClearingConcentration(_) => InputMode::ClearingConcentration(new_state),
+        InputMode::ClearingStatus(_) => InputMode::ClearingStatus(new_state),
         InputMode::Removing(_) => InputMode::Removing(new_state),
         _ => app.input_mode.clone(),
     };
@@ -393,5 +399,28 @@ fn handle_removing_mode(app: &mut App, key: KeyEvent) {
             }
             _ => {}
         }
+    }
+}
+
+fn handle_clear_choice_mode(app: &mut App, key: KeyEvent, choice: ClearAction) {
+    let mut choice = choice;
+    match key.code {
+        KeyCode::Esc => app.cancel_input(),
+        KeyCode::Up | KeyCode::Down => {
+            choice = match choice {
+                ClearAction::Concentration => ClearAction::StatusEffects,
+                ClearAction::StatusEffects => ClearAction::Concentration,
+            };
+            app.input_mode = InputMode::ClearActionSelection(choice);
+        }
+        KeyCode::Enter => match choice {
+            ClearAction::Concentration => {
+                app.input_mode = InputMode::ClearingConcentration(SelectionState::default())
+            }
+            ClearAction::StatusEffects => {
+                app.input_mode = InputMode::ClearingStatus(SelectionState::default())
+            }
+        },
+        _ => {}
     }
 }

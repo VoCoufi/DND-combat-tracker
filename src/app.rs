@@ -14,6 +14,8 @@ pub enum InputMode {
     ApplyingConcentration(AddConcentrationState),
     ConcentrationCheck(ConcentrationCheckState),
     ClearingConcentration(SelectionState),
+    ClearActionSelection(ClearAction),
+    ClearingStatus(SelectionState),
     Removing(SelectionState),
 }
 
@@ -85,6 +87,12 @@ pub struct ConcentrationCheckState {
     pub combatant_index: usize,
     pub dc: i32,
     pub input: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ClearAction {
+    Concentration,
+    StatusEffects,
 }
 
 pub struct App {
@@ -180,12 +188,8 @@ impl App {
         self.clear_message();
     }
 
-    pub fn start_clearing_concentration(&mut self) {
-        if self.encounter.combatants.is_empty() {
-            self.set_message("No combatants to clear concentration from!".to_string());
-            return;
-        }
-        self.input_mode = InputMode::ClearingConcentration(SelectionState::default());
+    pub fn start_clear_choice(&mut self) {
+        self.input_mode = InputMode::ClearActionSelection(ClearAction::Concentration);
         self.clear_message();
     }
 
@@ -462,6 +466,23 @@ impl App {
             self.set_message(format!("{} stops concentrating.", name));
         } else {
             self.set_message(format!("{} has no concentration to clear.", name));
+        }
+        self.input_mode = InputMode::Normal;
+        Ok(())
+    }
+
+    pub fn complete_clear_status_effects(&mut self, index: usize) -> Result<(), String> {
+        if index >= self.encounter.combatants.len() {
+            return Err("Invalid combatant index".to_string());
+        }
+
+        let combatant = &mut self.encounter.combatants[index];
+        let name = combatant.name.clone();
+        if combatant.status_effects.is_empty() {
+            self.set_message(format!("{} has no status effects to clear.", name));
+        } else {
+            combatant.status_effects.clear();
+            self.set_message(format!("Cleared all status effects from {}.", name));
         }
         self.input_mode = InputMode::Normal;
         Ok(())
