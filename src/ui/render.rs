@@ -364,7 +364,9 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 }
 
 fn hp_color(combatant: &Combatant) -> Color {
-    if combatant.is_unconscious() {
+    if combatant.is_dead() {
+        Color::DarkGray
+    } else if combatant.is_unconscious() {
         Color::DarkGray
     } else if combatant.hp_percentage() < 25.0 {
         Color::Red
@@ -387,6 +389,13 @@ fn hp_bar(combatant: &Combatant) -> String {
 }
 
 fn death_save_span(combatant: &Combatant) -> Span<'static> {
+    if combatant.is_dead() {
+        return Span::styled(
+            " [DEAD]",
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        );
+    }
+
     if let Some(ds) = &combatant.death_saves {
         let mut label = format!(" DS S{}/F{}", ds.successes, ds.failures);
         if ds.is_stable {

@@ -62,6 +62,13 @@ impl Combatant {
         self.hp_current <= 0
     }
 
+    pub fn is_dead(&self) -> bool {
+        self.death_saves
+            .as_ref()
+            .map(|d| d.failures >= 3)
+            .unwrap_or(false)
+    }
+
     pub fn hp_percentage(&self) -> f32 {
         if self.hp_max == 0 {
             0.0

@@ -280,6 +280,9 @@ impl App {
         if combatant.hp_current > 0 {
             return Err("Combatant is not at 0 HP".to_string());
         }
+        if combatant.is_dead() {
+            return Err("Combatant is already dead".to_string());
+        }
 
         let name = combatant.name.clone();
         let outcome = combatant.apply_death_save_roll(roll);
