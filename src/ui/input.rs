@@ -288,9 +288,9 @@ fn handle_condition_selection_mode(app: &mut App, key: KeyEvent, state: Conditio
             };
 
             let duration = match parts[1].parse::<i32>() {
-                Ok(d) if d > 0 => d,
+                Ok(d) if d >= 0 => d,
                 _ => {
-                    app.set_message("Duration must be a positive number".to_string());
+                    app.set_message("Duration must be a non-negative number".to_string());
                     return;
                 }
             };

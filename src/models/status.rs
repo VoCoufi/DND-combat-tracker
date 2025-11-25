@@ -77,10 +77,14 @@ impl StatusEffect {
     pub fn decrement_duration(&mut self) {
         if self.duration > 0 {
             self.duration -= 1;
+            if self.duration == 0 {
+                // Move to negative to mark as expired after ticking down from a timed duration
+                self.duration = -1;
+            }
         }
     }
 
     pub fn is_expired(&self) -> bool {
-        self.duration <= 0
+        self.duration < 0
     }
 }
