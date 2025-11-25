@@ -16,7 +16,7 @@ This roadmap outlines planned features and improvements for the D&D 5e Combat Tr
 Essential features that significantly improve the DM experience during live play sessions.
 
 ### 1. Complete Status Effect Selection Interface
-**Status**: ⚪ Planned
+**Status**: 🟢 Completed
 **Difficulty**: Medium
 **Estimated Effort**: 2-3 days
 
