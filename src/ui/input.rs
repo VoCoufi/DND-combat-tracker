@@ -1,6 +1,6 @@
 use crate::app::{
     AddConcentrationState, App, ClearAction, ConcentrationCheckState, ConditionSelectionState,
-    InputMode, SelectionState,
+    InputMode, SelectionState, StatusSelectionState,
 };
 use crossterm::event::{KeyCode, KeyEvent};
 
@@ -47,8 +47,23 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
         }),
         InputMode::ClearActionSelection(choice) => handle_clear_choice_mode(app, key, choice),
         InputMode::ClearingStatus(_) => handle_selection_mode(app, key, |app, idx, _| {
-            let _ = app.complete_clear_status_effects(idx);
+            if let Some(combatant) = app.encounter.combatants.get(idx) {
+                if combatant.status_effects.is_empty() {
+                    let _ = app.complete_clear_status_effect(idx, None);
+                } else if combatant.status_effects.len() == 1 {
+                    let _ = app.complete_clear_status_effect(idx, Some(0));
+                } else {
+                    app.input_mode = InputMode::SelectingStatusToClear(StatusSelectionState {
+                        combatant_index: idx,
+                        selected_status_index: 0,
+                    });
+                }
+            } else {
+                app.set_message("Invalid combatant selection".to_string());
+                app.input_mode = InputMode::Normal;
+            }
         }),
+        InputMode::SelectingStatusToClear(state) => handle_status_clear_selection(app, key, state),
         InputMode::Removing(_) => handle_removing_mode(app, key),
     }
 }
@@ -154,6 +169,7 @@ where
             (state.selected_index, state.input.clone(), true)
         }
         InputMode::ClearingStatus(state) => (state.selected_index, state.input.clone(), true),
+        InputMode::SelectingStatusToClear(_) => return,
         _ => return,
     };
 
@@ -200,7 +216,7 @@ fn update_selection_state(app: &mut App, index: usize, input: String) {
         input,
     };
 
-    app.input_mode = match app.input_mode {
+    app.input_mode = match app.input_mode.clone() {
         InputMode::DealingDamage(_) => InputMode::DealingDamage(new_state),
         InputMode::Healing(_) => InputMode::Healing(new_state),
         InputMode::AddingStatus(_) => InputMode::AddingStatus(new_state),
@@ -208,6 +224,12 @@ fn update_selection_state(app: &mut App, index: usize, input: String) {
         InputMode::ConcentrationTarget(_) => InputMode::ConcentrationTarget(new_state),
         InputMode::ClearingConcentration(_) => InputMode::ClearingConcentration(new_state),
         InputMode::ClearingStatus(_) => InputMode::ClearingStatus(new_state),
+        InputMode::SelectingStatusToClear(state) => {
+            InputMode::SelectingStatusToClear(StatusSelectionState {
+                combatant_index: state.combatant_index,
+                selected_status_index: new_state.selected_index,
+            })
+        }
         InputMode::Removing(_) => InputMode::Removing(new_state),
         _ => app.input_mode.clone(),
     };
@@ -421,6 +443,45 @@ fn handle_clear_choice_mode(app: &mut App, key: KeyEvent, choice: ClearAction) {
                 app.input_mode = InputMode::ClearingStatus(SelectionState::default())
             }
         },
+        _ => {}
+    }
+}
+
+fn handle_status_clear_selection(app: &mut App, key: KeyEvent, state: StatusSelectionState) {
+    let mut selected = state.selected_status_index;
+    let combatant_index = state.combatant_index;
+
+    match key.code {
+        KeyCode::Esc => app.cancel_input(),
+        KeyCode::Up => {
+            if selected > 0 {
+                selected -= 1;
+            } else {
+                if let Some(combatant) = app.encounter.combatants.get(combatant_index) {
+                    selected = combatant.status_effects.len().saturating_sub(1);
+                }
+            }
+            app.input_mode = InputMode::SelectingStatusToClear(StatusSelectionState {
+                combatant_index,
+                selected_status_index: selected,
+            });
+        }
+        KeyCode::Down => {
+            if let Some(combatant) = app.encounter.combatants.get(combatant_index) {
+                if selected + 1 < combatant.status_effects.len() {
+                    selected += 1;
+                } else {
+                    selected = 0;
+                }
+            }
+            app.input_mode = InputMode::SelectingStatusToClear(StatusSelectionState {
+                combatant_index,
+                selected_status_index: selected,
+            });
+        }
+        KeyCode::Enter => {
+            let _ = app.complete_clear_status_effect(combatant_index, Some(selected));
+        }
         _ => {}
     }
 }

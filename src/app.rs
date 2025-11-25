@@ -16,6 +16,7 @@ pub enum InputMode {
     ClearingConcentration(SelectionState),
     ClearActionSelection(ClearAction),
     ClearingStatus(SelectionState),
+    SelectingStatusToClear(StatusSelectionState),
     Removing(SelectionState),
 }
 
@@ -93,6 +94,12 @@ pub struct ConcentrationCheckState {
 pub enum ClearAction {
     Concentration,
     StatusEffects,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StatusSelectionState {
+    pub combatant_index: usize,
+    pub selected_status_index: usize,
 }
 
 pub struct App {
@@ -471,19 +478,39 @@ impl App {
         Ok(())
     }
 
-    pub fn complete_clear_status_effects(&mut self, index: usize) -> Result<(), String> {
-        if index >= self.encounter.combatants.len() {
+    pub fn complete_clear_status_effect(
+        &mut self,
+        combatant_index: usize,
+        status_index: Option<usize>,
+    ) -> Result<(), String> {
+        if combatant_index >= self.encounter.combatants.len() {
             return Err("Invalid combatant index".to_string());
         }
 
-        let combatant = &mut self.encounter.combatants[index];
+        let combatant = &mut self.encounter.combatants[combatant_index];
         let name = combatant.name.clone();
-        if combatant.status_effects.is_empty() {
-            self.set_message(format!("{} has no status effects to clear.", name));
-        } else {
-            combatant.status_effects.clear();
-            self.set_message(format!("Cleared all status effects from {}.", name));
-        }
+        match status_index {
+            Some(idx) => {
+                if idx < combatant.status_effects.len() {
+                    let removed = combatant.status_effects.remove(idx);
+                    self.set_message(format!(
+                        "Removed {} from {}.",
+                        removed.condition.as_str(),
+                        name
+                    ));
+                } else {
+                    return Err("Invalid status selection".to_string());
+                }
+            }
+            None => {
+                if combatant.status_effects.is_empty() {
+                    self.set_message(format!("{} has no status effects to clear.", name));
+                } else {
+                    combatant.status_effects.clear();
+                    self.set_message(format!("Cleared all status effects from {}.", name));
+                }
+            }
+        };
         self.input_mode = InputMode::Normal;
         Ok(())
     }

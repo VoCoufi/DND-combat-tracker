@@ -8,7 +8,7 @@ use ratatui::{
 
 use crate::app::{
     AddCombatantState, AddConcentrationState, App, ClearAction, ConcentrationCheckState,
-    ConditionSelectionState, InputMode, SelectionState,
+    ConditionSelectionState, InputMode, SelectionState, StatusSelectionState,
 };
 use crate::models::{Combatant, ConditionType};
 
@@ -65,6 +65,7 @@ pub fn render(f: &mut Frame, app: &App) {
         InputMode::ClearingStatus(state) => {
             render_selection_modal(f, state, "Clear Status Effects", "Select combatant:", app)
         }
+        InputMode::SelectingStatusToClear(state) => render_status_clear_modal(f, state, app),
         InputMode::Removing(state) => render_selection_modal(
             f,
             state,
@@ -232,6 +233,67 @@ fn render_add_combatant_modal(f: &mut Frame, state: &AddCombatantState) {
 
     let block = Block::default()
         .title(" Add Combatant ")
+        .borders(Borders::ALL)
+        .style(Style::default().fg(Color::Yellow));
+
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
+
+    f.render_widget(Clear, area);
+    f.render_widget(paragraph, area);
+}
+
+fn render_status_clear_modal(f: &mut Frame, state: &StatusSelectionState, app: &App) {
+    let area = centered_rect(60, 50, f.area());
+    let combatant = app.encounter.combatants.get(state.combatant_index).cloned();
+
+    let name = combatant
+        .as_ref()
+        .map(|c| c.name.as_str())
+        .unwrap_or("Unknown");
+
+    let mut lines = vec![Line::from(Span::styled(
+        format!("Clear status from {}", name),
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    ))];
+    lines.push(Line::from(""));
+
+    if let Some(c) = combatant {
+        for (i, effect) in c.status_effects.iter().enumerate() {
+            let selected = i == state.selected_status_index;
+            let style = if selected {
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(Color::White)
+            };
+            let prefix = if selected { "> " } else { "  " };
+            let duration = if effect.duration >= 0 {
+                format!("{}r", effect.duration)
+            } else {
+                "∞".to_string()
+            };
+            lines.push(Line::from(Span::styled(
+                format!(
+                    "{}{} (duration: {})",
+                    prefix,
+                    effect.condition.as_str(),
+                    duration
+                ),
+                style,
+            )));
+        }
+    } else {
+        lines.push(Line::from(Span::styled(
+            "No combatant selected.",
+            Style::default().fg(Color::Red),
+        )));
+    }
+
+    let block = Block::default()
+        .title(" Clear Status ")
         .borders(Borders::ALL)
         .style(Style::default().fg(Color::Yellow));
 

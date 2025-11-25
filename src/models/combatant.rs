@@ -44,7 +44,16 @@ impl Combatant {
     }
 
     pub fn add_status_effect(&mut self, effect: StatusEffect) {
-        self.status_effects.push(effect);
+        // Replace existing effect of the same condition instead of duplicating.
+        if let Some(existing) = self
+            .status_effects
+            .iter_mut()
+            .find(|e| e.condition == effect.condition)
+        {
+            *existing = effect;
+        } else {
+            self.status_effects.push(effect);
+        }
     }
 
     pub fn remove_status_effect(&mut self, index: usize) {
