@@ -13,6 +13,7 @@ pub enum InputMode {
     ConcentrationTarget(SelectionState),
     ApplyingConcentration(AddConcentrationState),
     ConcentrationCheck(ConcentrationCheckState),
+    ClearingConcentration(SelectionState),
     Removing(SelectionState),
 }
 
@@ -176,6 +177,15 @@ impl App {
             return;
         }
         self.input_mode = InputMode::ConcentrationTarget(SelectionState::default());
+        self.clear_message();
+    }
+
+    pub fn start_clearing_concentration(&mut self) {
+        if self.encounter.combatants.is_empty() {
+            self.set_message("No combatants to clear concentration from!".to_string());
+            return;
+        }
+        self.input_mode = InputMode::ClearingConcentration(SelectionState::default());
         self.clear_message();
     }
 
@@ -437,6 +447,23 @@ impl App {
             ));
         }
 
+        Ok(())
+    }
+
+    pub fn complete_clear_concentration(&mut self, index: usize) -> Result<(), String> {
+        if index >= self.encounter.combatants.len() {
+            return Err("Invalid combatant index".to_string());
+        }
+
+        let combatant = &mut self.encounter.combatants[index];
+        let name = combatant.name.clone();
+        if combatant.concentration.is_some() {
+            combatant.clear_concentration();
+            self.set_message(format!("{} stops concentrating.", name));
+        } else {
+            self.set_message(format!("{} has no concentration to clear.", name));
+        }
+        self.input_mode = InputMode::Normal;
         Ok(())
     }
 }

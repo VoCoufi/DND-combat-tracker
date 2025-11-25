@@ -58,6 +58,9 @@ pub fn render(f: &mut Frame, app: &App) {
         }
         InputMode::ApplyingConcentration(state) => render_add_concentration_modal(f, state, app),
         InputMode::ConcentrationCheck(state) => render_concentration_check(f, state, app),
+        InputMode::ClearingConcentration(state) => {
+            render_selection_modal(f, state, "Clear Concentration", "Select combatant:", app)
+        }
         InputMode::Removing(state) => render_selection_modal(
             f,
             state,
@@ -146,7 +149,7 @@ fn render_combatants(f: &mut Frame, area: Rect, app: &App) {
 fn render_commands(f: &mut Frame, area: Rect, app: &App) {
     let commands = match app.input_mode {
         InputMode::Normal => {
-            "[n] Next Turn  [d] Damage  [h] Heal  [s] Status  [v] Death Save  [c] Concentration  [a] Add  [r] Remove  [q] Quit"
+            "[n] Next Turn  [d] Damage  [h] Heal  [s] Status  [v] Death Save  [c] Concentration  [x] Clear Conc  [a] Add  [r] Remove  [q] Quit"
         }
         _ => "[Esc] Cancel",
     };

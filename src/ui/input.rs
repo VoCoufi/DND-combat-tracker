@@ -42,6 +42,9 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
         }),
         InputMode::ApplyingConcentration(state) => handle_add_concentration_mode(app, key, state),
         InputMode::ConcentrationCheck(state) => handle_concentration_check_mode(app, key, state),
+        InputMode::ClearingConcentration(_) => handle_selection_mode(app, key, |app, idx, _| {
+            let _ = app.complete_clear_concentration(idx);
+        }),
         InputMode::Removing(_) => handle_removing_mode(app, key),
     }
 }
@@ -59,6 +62,7 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
         KeyCode::Char('s') => app.start_adding_status(),
         KeyCode::Char('v') => app.start_rolling_death_save(),
         KeyCode::Char('c') => app.start_concentration_target(),
+        KeyCode::Char('x') => app.start_clearing_concentration(),
         KeyCode::Char('r') => app.start_removing(),
         _ => {}
     }
@@ -142,6 +146,9 @@ where
         InputMode::Healing(state) => (state.selected_index, state.input.clone(), false),
         InputMode::RollingDeathSave(state) => (state.selected_index, state.input.clone(), false),
         InputMode::ConcentrationTarget(state) => (state.selected_index, state.input.clone(), true),
+        InputMode::ClearingConcentration(state) => {
+            (state.selected_index, state.input.clone(), true)
+        }
         _ => return,
     };
 
@@ -194,6 +201,7 @@ fn update_selection_state(app: &mut App, index: usize, input: String) {
         InputMode::AddingStatus(_) => InputMode::AddingStatus(new_state),
         InputMode::RollingDeathSave(_) => InputMode::RollingDeathSave(new_state),
         InputMode::ConcentrationTarget(_) => InputMode::ConcentrationTarget(new_state),
+        InputMode::ClearingConcentration(_) => InputMode::ClearingConcentration(new_state),
         InputMode::Removing(_) => InputMode::Removing(new_state),
         _ => app.input_mode.clone(),
     };
