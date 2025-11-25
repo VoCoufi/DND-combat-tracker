@@ -258,7 +258,7 @@ DMs repeatedly use the same monster stat blocks. Templates eliminate repetitive 
 ---
 
 ### 8. Improved HP Visualization
-**Status**: ⚪ Planned
+**Status**: 🟢 Completed
 **Difficulty**: Easy
 **Estimated Effort**: 1 day
 
