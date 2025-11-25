@@ -1,22 +1,22 @@
 use ratatui::{
+    Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap},
-    Frame,
 };
 
-use crate::app::{App, InputMode, AddCombatantState, SelectionState};
-use crate::models::ConditionType;
+use crate::app::{AddCombatantState, App, InputMode, SelectionState};
+use crate::models::{Combatant, ConditionType};
 
 pub fn render(f: &mut Frame, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Header
-            Constraint::Min(0),      // Main content
-            Constraint::Length(3),  // Commands
-            Constraint::Length(2),  // Message
+            Constraint::Length(3), // Header
+            Constraint::Min(0),    // Main content
+            Constraint::Length(3), // Commands
+            Constraint::Length(2), // Message
         ])
         .split(f.area());
 
@@ -37,11 +37,23 @@ pub fn render(f: &mut Frame, app: &App) {
     // Render modal if needed
     match &app.input_mode {
         InputMode::AddingCombatant(state) => render_add_combatant_modal(f, state),
-        InputMode::DealingDamage(state) => render_selection_modal(f, state, "Deal Damage", "Enter damage amount:", app),
-        InputMode::Healing(state) => render_selection_modal(f, state, "Heal", "Enter heal amount:", app),
-        InputMode::AddingStatus(state) => render_selection_modal(f, state, "Add Status Effect", "Select combatant:", app),
+        InputMode::DealingDamage(state) => {
+            render_selection_modal(f, state, "Deal Damage", "Enter damage amount:", app)
+        }
+        InputMode::Healing(state) => {
+            render_selection_modal(f, state, "Heal", "Enter heal amount:", app)
+        }
+        InputMode::AddingStatus(state) => {
+            render_selection_modal(f, state, "Add Status Effect", "Select combatant:", app)
+        }
         InputMode::SelectingCondition(index) => render_condition_selection(f, *index, app),
-        InputMode::Removing(state) => render_selection_modal(f, state, "Remove Combatant", "Select combatant to remove:", app),
+        InputMode::Removing(state) => render_selection_modal(
+            f,
+            state,
+            "Remove Combatant",
+            "Select combatant to remove:",
+            app,
+        ),
         InputMode::Normal => {}
     }
 }
@@ -68,7 +80,7 @@ fn render_combatants(f: &mut Frame, area: Rect, app: &App) {
             let is_current = i == app.encounter.current_turn_index;
             let arrow = if is_current { "→ " } else { "  " };
 
-            let color = if c.is_player {
+            let name_color = if c.is_player {
                 Color::Green
             } else {
                 Color::Red
@@ -85,21 +97,20 @@ fn render_combatants(f: &mut Frame, area: Rect, app: &App) {
                 format!(" [{}]", effects.join(", "))
             };
 
-            let hp_style = if c.is_unconscious() {
-                Style::default().fg(Color::DarkGray)
-            } else if c.hp_percentage() < 25.0 {
-                Style::default().fg(Color::Red)
-            } else if c.hp_percentage() < 50.0 {
-                Style::default().fg(Color::Yellow)
-            } else {
-                Style::default().fg(Color::Green)
-            };
+            let hp_color = hp_color(c);
+            let hp_style = Style::default().fg(hp_color);
+            let hp_bar = hp_bar(c);
 
             let line = Line::from(vec![
                 Span::raw(arrow),
                 Span::raw(format!("[{:2}] ", c.initiative)),
-                Span::styled(format!("{:<20}", c.name), Style::default().fg(color).add_modifier(Modifier::BOLD)),
-                Span::raw(" HP: "),
+                Span::styled(
+                    format!("{:<20}", c.name),
+                    Style::default().fg(name_color).add_modifier(Modifier::BOLD),
+                ),
+                Span::raw(" HP "),
+                Span::styled(hp_bar, hp_style),
+                Span::raw(" "),
                 Span::styled(format!("{}/{}", c.hp_current, c.hp_max), hp_style),
                 Span::raw(format!("  AC: {}  ", c.armor_class)),
                 Span::styled(status_str, Style::default().fg(Color::Yellow)),
@@ -109,13 +120,12 @@ fn render_combatants(f: &mut Frame, area: Rect, app: &App) {
         })
         .collect();
 
-    let list = List::new(items)
-        .block(
-            Block::default()
-                .title(" Initiative Order ")
-                .borders(Borders::ALL)
-                .style(Style::default().fg(Color::White)),
-        );
+    let list = List::new(items).block(
+        Block::default()
+            .title(" Initiative Order ")
+            .borders(Borders::ALL)
+            .style(Style::default().fg(Color::White)),
+    );
 
     f.render_widget(list, area);
 }
@@ -176,16 +186,27 @@ fn render_add_combatant_modal(f: &mut Frame, state: &AddCombatantState) {
                 Span::styled(values[i].clone(), Style::default().fg(Color::Green)),
             ]));
         } else if i == state.step {
-            lines.push(Line::from(vec![
-                Span::styled(*prompt, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-            ]));
+            lines.push(Line::from(vec![Span::styled(
+                *prompt,
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]));
             lines.push(Line::from(vec![
                 Span::raw("> "),
                 Span::styled(values[i].clone(), Style::default().fg(Color::White)),
-                Span::styled("_", Style::default().fg(Color::White).add_modifier(Modifier::SLOW_BLINK)),
+                Span::styled(
+                    "_",
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::SLOW_BLINK),
+                ),
             ]));
         } else {
-            lines.push(Line::from(Span::styled(*prompt, Style::default().fg(Color::DarkGray))));
+            lines.push(Line::from(Span::styled(
+                *prompt,
+                Style::default().fg(Color::DarkGray),
+            )));
         }
     }
 
@@ -194,9 +215,7 @@ fn render_add_combatant_modal(f: &mut Frame, state: &AddCombatantState) {
         .borders(Borders::ALL)
         .style(Style::default().fg(Color::Yellow));
 
-    let paragraph = Paragraph::new(lines)
-        .block(block)
-        .wrap(Wrap { trim: true });
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
 
     f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
@@ -213,21 +232,36 @@ fn render_selection_modal(
 
     let mut lines = vec![Line::from(Span::styled(
         prompt,
-        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
     ))];
 
     lines.push(Line::from(""));
 
     for (i, c) in app.encounter.combatants.iter().enumerate() {
         let style = if i == state.selected_index {
-            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(Color::White)
         };
 
-        let marker = if i == state.selected_index { "> " } else { "  " };
+        let marker = if i == state.selected_index {
+            "> "
+        } else {
+            "  "
+        };
         lines.push(Line::from(Span::styled(
-            format!("{}{}. {} (HP: {}/{})", marker, i + 1, c.name, c.hp_current, c.hp_max),
+            format!(
+                "{}{}. {} (HP: {}/{})",
+                marker,
+                i + 1,
+                c.name,
+                c.hp_current,
+                c.hp_max
+            ),
             style,
         )));
     }
@@ -245,9 +279,7 @@ fn render_selection_modal(
         .borders(Borders::ALL)
         .style(Style::default().fg(Color::Yellow));
 
-    let paragraph = Paragraph::new(lines)
-        .block(block)
-        .wrap(Wrap { trim: true });
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
 
     f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
@@ -256,14 +288,19 @@ fn render_selection_modal(
 fn render_condition_selection(f: &mut Frame, combatant_index: usize, app: &App) {
     let area = centered_rect(50, 60, f.area());
 
-    let combatant_name = app.encounter.combatants.get(combatant_index)
+    let combatant_name = app
+        .encounter
+        .combatants
+        .get(combatant_index)
         .map(|c| c.name.as_str())
         .unwrap_or("Unknown");
 
     let mut lines = vec![
         Line::from(Span::styled(
             format!("Select condition for {}:", combatant_name),
-            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
         )),
         Line::from(""),
     ];
@@ -277,16 +314,16 @@ fn render_condition_selection(f: &mut Frame, combatant_index: usize, app: &App) 
     }
 
     lines.push(Line::from(""));
-    lines.push(Line::from(Span::raw("Enter number and duration (e.g., 1 3):")));
+    lines.push(Line::from(Span::raw(
+        "Enter number and duration (e.g., 1 3):",
+    )));
 
     let block = Block::default()
         .title(" Select Condition ")
         .borders(Borders::ALL)
         .style(Style::default().fg(Color::Yellow));
 
-    let paragraph = Paragraph::new(lines)
-        .block(block)
-        .wrap(Wrap { trim: true });
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
 
     f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
@@ -310,4 +347,27 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
             Constraint::Percentage((100 - percent_x) / 2),
         ])
         .split(popup_layout[1])[1]
+}
+
+fn hp_color(combatant: &Combatant) -> Color {
+    if combatant.is_unconscious() {
+        Color::DarkGray
+    } else if combatant.hp_percentage() < 25.0 {
+        Color::Red
+    } else if combatant.hp_percentage() < 50.0 {
+        Color::Yellow
+    } else {
+        Color::Green
+    }
+}
+
+fn hp_bar(combatant: &Combatant) -> String {
+    let segments: usize = 12;
+    let percentage = combatant.hp_percentage().clamp(0.0, 100.0);
+    let filled = ((percentage / 100.0) * segments as f32)
+        .round()
+        .min(segments as f32) as usize;
+    let empty = segments.saturating_sub(filled);
+
+    format!("[{}{}]", "#".repeat(filled), ".".repeat(empty))
 }
