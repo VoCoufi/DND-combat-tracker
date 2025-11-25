@@ -130,15 +130,10 @@ impl App {
             .initiative
             .parse::<i32>()
             .map_err(|_| "Invalid initiative value")?;
-        let hp = state
-            .hp
-            .parse::<i32>()
-            .map_err(|_| "Invalid HP value")?;
-        let ac = state
-            .ac
-            .parse::<i32>()
-            .map_err(|_| "Invalid AC value")?;
-        let is_player = state.is_player.to_lowercase() == "y" || state.is_player.to_lowercase() == "yes";
+        let hp = state.hp.parse::<i32>().map_err(|_| "Invalid HP value")?;
+        let ac = state.ac.parse::<i32>().map_err(|_| "Invalid AC value")?;
+        let is_player =
+            state.is_player.to_lowercase() == "y" || state.is_player.to_lowercase() == "yes";
 
         if state.name.is_empty() {
             return Err("Name cannot be empty".to_string());
@@ -181,7 +176,12 @@ impl App {
         Ok(())
     }
 
-    pub fn complete_add_status(&mut self, combatant_index: usize, condition: ConditionType, duration: i32) -> Result<(), String> {
+    pub fn complete_add_status(
+        &mut self,
+        combatant_index: usize,
+        condition: ConditionType,
+        duration: i32,
+    ) -> Result<(), String> {
         if combatant_index >= self.encounter.combatants.len() {
             return Err("Invalid combatant index".to_string());
         }
@@ -192,7 +192,12 @@ impl App {
         let name = combatant.name.clone();
 
         self.input_mode = InputMode::Normal;
-        self.set_message(format!("Added {} to {} for {} rounds", condition.as_str(), name, duration));
+        self.set_message(format!(
+            "Added {} to {} for {} rounds",
+            condition.as_str(),
+            name,
+            duration
+        ));
         Ok(())
     }
 

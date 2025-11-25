@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::models::Combatant;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CombatEncounter {
@@ -37,7 +37,8 @@ impl CombatEncounter {
     }
 
     pub fn sort_by_initiative(&mut self) {
-        self.combatants.sort_by(|a, b| b.initiative.cmp(&a.initiative));
+        self.combatants
+            .sort_by(|a, b| b.initiative.cmp(&a.initiative));
     }
 
     pub fn next_turn(&mut self) {

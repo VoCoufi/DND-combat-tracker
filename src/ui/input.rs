@@ -1,5 +1,5 @@
-use crossterm::event::{KeyCode, KeyEvent};
 use crate::app::{App, InputMode, SelectionState};
+use crossterm::event::{KeyCode, KeyEvent};
 
 pub fn handle_key_event(app: &mut App, key: KeyEvent) {
     match &app.input_mode {
@@ -62,11 +62,21 @@ fn handle_add_combatant_mode(app: &mut App, key: KeyEvent) {
             }
             KeyCode::Backspace => {
                 match state.step {
-                    0 => { state.name.pop(); }
-                    1 => { state.initiative.pop(); }
-                    2 => { state.hp.pop(); }
-                    3 => { state.ac.pop(); }
-                    4 => { state.is_player.pop(); }
+                    0 => {
+                        state.name.pop();
+                    }
+                    1 => {
+                        state.initiative.pop();
+                    }
+                    2 => {
+                        state.hp.pop();
+                    }
+                    3 => {
+                        state.ac.pop();
+                    }
+                    4 => {
+                        state.is_player.pop();
+                    }
                     _ => {}
                 }
                 app.input_mode = InputMode::AddingCombatant(state);
@@ -181,7 +191,8 @@ fn handle_status_selection_mode(app: &mut App, key: KeyEvent) {
                 update_selection_state(app, new_index, String::new());
             }
             KeyCode::Down => {
-                let new_index = if selected_index < app.encounter.combatants.len().saturating_sub(1) {
+                let new_index = if selected_index < app.encounter.combatants.len().saturating_sub(1)
+                {
                     selected_index + 1
                 } else {
                     0
@@ -223,7 +234,8 @@ fn handle_removing_mode(app: &mut App, key: KeyEvent) {
                 update_selection_state(app, new_index, String::new());
             }
             KeyCode::Down => {
-                let new_index = if selected_index < app.encounter.combatants.len().saturating_sub(1) {
+                let new_index = if selected_index < app.encounter.combatants.len().saturating_sub(1)
+                {
                     selected_index + 1
                 } else {
                     0
