@@ -1,5 +1,5 @@
 use crate::combat::CombatEncounter;
-use crate::models::{Combatant, ConditionType, StatusEffect};
+use crate::models::{Combatant, ConditionType, DeathSaveOutcome, StatusEffect};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum InputMode {
@@ -9,6 +9,7 @@ pub enum InputMode {
     Healing(SelectionState),
     AddingStatus(SelectionState),
     SelectingCondition(ConditionSelectionState),
+    RollingDeathSave(SelectionState),
     Removing(SelectionState),
 }
 
@@ -126,6 +127,20 @@ impl App {
         self.clear_message();
     }
 
+    pub fn start_rolling_death_save(&mut self) {
+        if self
+            .encounter
+            .combatants
+            .iter()
+            .all(|c| c.death_saves.is_none() || c.hp_current > 0)
+        {
+            self.set_message("No combatants need death saves!".to_string());
+            return;
+        }
+        self.input_mode = InputMode::RollingDeathSave(SelectionState::default());
+        self.clear_message();
+    }
+
     pub fn cancel_input(&mut self) {
         self.input_mode = InputMode::Normal;
         self.clear_message();
@@ -158,12 +173,41 @@ impl App {
         }
 
         let combatant = &mut self.encounter.combatants[index];
+        let was_unconscious = combatant.is_unconscious();
         combatant.take_damage(damage);
         let name = combatant.name.clone();
         let hp = combatant.hp_current;
+        let mut extra_message: Option<String> = None;
+
+        if combatant.is_player {
+            if !was_unconscious && combatant.is_unconscious() {
+                combatant.ensure_death_saves();
+                extra_message = Some(format!("{} is down and starts making death saves.", name));
+            } else if was_unconscious && combatant.is_unconscious() {
+                match combatant.fail_death_save_from_damage() {
+                    DeathSaveOutcome::Died => {
+                        extra_message = Some(format!("{} takes damage at 0 HP and dies.", name));
+                    }
+                    DeathSaveOutcome::Ongoing => {
+                        if let Some(ds) = &combatant.death_saves {
+                            extra_message = Some(format!(
+                                "{} takes damage at 0 HP (Death Saves F{}/S{})",
+                                name, ds.failures, ds.successes
+                            ));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
 
         self.input_mode = InputMode::Normal;
-        self.set_message(format!("{} took {} damage (HP: {})", name, damage, hp));
+        let base = format!("{} took {} damage (HP: {})", name, damage, hp);
+        if let Some(extra) = extra_message {
+            self.set_message(format!("{} | {}", base, extra));
+        } else {
+            self.set_message(base);
+        }
         Ok(())
     }
 
@@ -176,6 +220,10 @@ impl App {
         combatant.heal(amount);
         let name = combatant.name.clone();
         let hp = combatant.hp_current;
+
+        if combatant.hp_current > 0 {
+            combatant.clear_death_saves();
+        }
 
         self.input_mode = InputMode::Normal;
         self.set_message(format!("{} healed {} HP (HP: {})", name, amount, hp));
@@ -217,6 +265,58 @@ impl App {
 
         self.input_mode = InputMode::Normal;
         self.set_message(format!("Removed combatant: {}", name));
+        Ok(())
+    }
+
+    pub fn complete_death_save_roll(&mut self, index: usize, roll: i32) -> Result<(), String> {
+        if index >= self.encounter.combatants.len() {
+            return Err("Invalid combatant index".to_string());
+        }
+
+        let combatant = &mut self.encounter.combatants[index];
+        if !combatant.is_player {
+            return Err("Only player characters roll death saves".to_string());
+        }
+        if combatant.hp_current > 0 {
+            return Err("Combatant is not at 0 HP".to_string());
+        }
+
+        let name = combatant.name.clone();
+        let outcome = combatant.apply_death_save_roll(roll);
+        self.input_mode = InputMode::Normal;
+
+        let message = match outcome {
+            DeathSaveOutcome::Revived => {
+                format!("{} rolled a 20 and regains consciousness at 1 HP!", name)
+            }
+            DeathSaveOutcome::Stabilized => format!(
+                "{} succeeds the death save and is now stable (S{}/F{})",
+                name,
+                combatant
+                    .death_saves
+                    .as_ref()
+                    .map(|d| d.successes)
+                    .unwrap_or(3),
+                combatant
+                    .death_saves
+                    .as_ref()
+                    .map(|d| d.failures)
+                    .unwrap_or(0)
+            ),
+            DeathSaveOutcome::Died => format!("{} failed too many death saves and has died.", name),
+            DeathSaveOutcome::Ongoing => {
+                if let Some(ds) = &combatant.death_saves {
+                    format!(
+                        "{} death save result recorded (S{}/F{})",
+                        name, ds.successes, ds.failures
+                    )
+                } else {
+                    format!("{} death save recorded.", name)
+                }
+            }
+        };
+
+        self.set_message(message);
         Ok(())
     }
 }

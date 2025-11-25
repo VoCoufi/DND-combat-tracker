@@ -23,6 +23,14 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
         }),
         InputMode::AddingStatus(_) => handle_status_selection_mode(app, key),
         InputMode::SelectingCondition(state) => handle_condition_selection_mode(app, key, state),
+        InputMode::RollingDeathSave(_) => handle_selection_mode(app, key, |app, idx, input| {
+            if let Ok(roll) = input.parse::<i32>() {
+                let _ = app.complete_death_save_roll(idx, roll);
+            } else {
+                app.set_message("Invalid roll value!".to_string());
+                app.input_mode = InputMode::Normal;
+            }
+        }),
         InputMode::Removing(_) => handle_removing_mode(app, key),
     }
 }
@@ -38,6 +46,7 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
         KeyCode::Char('d') => app.start_dealing_damage(),
         KeyCode::Char('h') => app.start_healing(),
         KeyCode::Char('s') => app.start_adding_status(),
+        KeyCode::Char('v') => app.start_rolling_death_save(),
         KeyCode::Char('r') => app.start_removing(),
         _ => {}
     }
@@ -119,6 +128,7 @@ where
     let (selected_index, mut input) = match &app.input_mode {
         InputMode::DealingDamage(state) => (state.selected_index, state.input.clone()),
         InputMode::Healing(state) => (state.selected_index, state.input.clone()),
+        InputMode::RollingDeathSave(state) => (state.selected_index, state.input.clone()),
         _ => return,
     };
 
@@ -169,6 +179,7 @@ fn update_selection_state(app: &mut App, index: usize, input: String) {
         InputMode::DealingDamage(_) => InputMode::DealingDamage(new_state),
         InputMode::Healing(_) => InputMode::Healing(new_state),
         InputMode::AddingStatus(_) => InputMode::AddingStatus(new_state),
+        InputMode::RollingDeathSave(_) => InputMode::RollingDeathSave(new_state),
         InputMode::Removing(_) => InputMode::Removing(new_state),
         _ => app.input_mode.clone(),
     };

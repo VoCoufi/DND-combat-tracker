@@ -1,4 +1,4 @@
-use super::status::StatusEffect;
+use super::{DeathSaveOutcome, DeathSaves, status::StatusEffect};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -10,6 +10,7 @@ pub struct Combatant {
     pub armor_class: i32,
     pub is_player: bool,
     pub status_effects: Vec<StatusEffect>,
+    pub death_saves: Option<DeathSaves>,
 }
 
 impl Combatant {
@@ -28,6 +29,7 @@ impl Combatant {
             armor_class,
             is_player,
             status_effects: Vec::new(),
+            death_saves: None,
         }
     }
 
@@ -65,6 +67,55 @@ impl Combatant {
             0.0
         } else {
             (self.hp_current as f32 / self.hp_max as f32) * 100.0
+        }
+    }
+
+    pub fn ensure_death_saves(&mut self) {
+        if self.is_player && self.death_saves.is_none() {
+            self.death_saves = Some(DeathSaves::default());
+        }
+    }
+
+    pub fn clear_death_saves(&mut self) {
+        self.death_saves = None;
+    }
+
+    pub fn apply_death_save_roll(&mut self, roll: i32) -> DeathSaveOutcome {
+        if !self.is_player || self.hp_current > 0 {
+            return DeathSaveOutcome::Ongoing;
+        }
+
+        self.ensure_death_saves();
+
+        if roll == 20 {
+            self.hp_current = 1;
+            self.death_saves = None;
+            return DeathSaveOutcome::Revived;
+        }
+
+        if let Some(saves) = &mut self.death_saves {
+            if roll == 1 {
+                saves.add_failure(2)
+            } else if roll >= 10 {
+                saves.add_success()
+            } else {
+                saves.add_failure(1)
+            }
+        } else {
+            DeathSaveOutcome::Ongoing
+        }
+    }
+
+    pub fn fail_death_save_from_damage(&mut self) -> DeathSaveOutcome {
+        if !self.is_player {
+            return DeathSaveOutcome::Ongoing;
+        }
+
+        self.ensure_death_saves();
+        if let Some(saves) = &mut self.death_saves {
+            saves.add_failure(1)
+        } else {
+            DeathSaveOutcome::Ongoing
         }
     }
 }

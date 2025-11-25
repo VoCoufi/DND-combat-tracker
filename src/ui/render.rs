@@ -47,6 +47,9 @@ pub fn render(f: &mut Frame, app: &App) {
             render_selection_modal(f, state, "Add Status Effect", "Select combatant:", app)
         }
         InputMode::SelectingCondition(state) => render_condition_selection(f, state, app),
+        InputMode::RollingDeathSave(state) => {
+            render_selection_modal(f, state, "Death Save", "Enter d20 roll:", app)
+        }
         InputMode::Removing(state) => render_selection_modal(
             f,
             state,
@@ -112,6 +115,7 @@ fn render_combatants(f: &mut Frame, area: Rect, app: &App) {
                 Span::styled(hp_bar, hp_style),
                 Span::raw(" "),
                 Span::styled(format!("{}/{}", c.hp_current, c.hp_max), hp_style),
+                death_save_span(c),
                 Span::raw(format!("  AC: {}  ", c.armor_class)),
                 Span::styled(status_str, Style::default().fg(Color::Yellow)),
             ]);
@@ -133,7 +137,7 @@ fn render_combatants(f: &mut Frame, area: Rect, app: &App) {
 fn render_commands(f: &mut Frame, area: Rect, app: &App) {
     let commands = match app.input_mode {
         InputMode::Normal => {
-            "[n] Next Turn  [d] Damage  [h] Heal  [s] Status  [a] Add  [r] Remove  [q] Quit"
+            "[n] Next Turn  [d] Damage  [h] Heal  [s] Status  [v] Death Save  [a] Add  [r] Remove  [q] Quit"
         }
         _ => "[Esc] Cancel",
     };
@@ -380,4 +384,21 @@ fn hp_bar(combatant: &Combatant) -> String {
     let empty = segments.saturating_sub(filled);
 
     format!("[{}{}]", "#".repeat(filled), ".".repeat(empty))
+}
+
+fn death_save_span(combatant: &Combatant) -> Span<'static> {
+    if let Some(ds) = &combatant.death_saves {
+        let mut label = format!(" DS S{}/F{}", ds.successes, ds.failures);
+        if ds.is_stable {
+            label.push_str(" (stable)");
+        }
+        Span::styled(
+            label,
+            Style::default()
+                .fg(Color::Magenta)
+                .add_modifier(Modifier::BOLD),
+        )
+    } else {
+        Span::raw("")
+    }
 }
