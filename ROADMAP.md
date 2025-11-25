@@ -83,7 +83,7 @@ When PCs drop to 0 HP in D&D 5e, they make death saving throws. DMs need to trac
 ---
 
 ### 3. Concentration Tracking
-**Status**: ⚪ Planned
+**Status**: 🟢 Completed
 **Difficulty**: Hard
 **Estimated Effort**: 3-4 days
 
