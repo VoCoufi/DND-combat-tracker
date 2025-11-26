@@ -56,6 +56,47 @@ impl ConditionType {
             ConditionType::Unconscious,
         ]
     }
+
+    pub fn description(&self) -> &'static str {
+        match self {
+            ConditionType::Blinded => {
+                "Automatically fails sight-based checks; attack rolls against have advantage; their attacks have disadvantage."
+            }
+            ConditionType::Charmed => {
+                "Can't attack charmer; charmer has advantage on social checks."
+            }
+            ConditionType::Deafened => "Automatically fails hearing-based checks.",
+            ConditionType::Frightened => {
+                "Disadvantage on ability checks/attacks while source in sight; can't willingly move closer to source."
+            }
+            ConditionType::Grappled => {
+                "Speed becomes 0; ends if grappler is incapacitated or moved away."
+            }
+            ConditionType::Incapacitated => "Can't take actions or reactions.",
+            ConditionType::Invisible => {
+                "Can't be seen without magic; attacks against have disadvantage; their attacks have advantage."
+            }
+            ConditionType::Paralyzed => {
+                "Incapacitated; can't move/speak; auto fail Str/Dex saves; attacks have advantage and crit within 5 ft."
+            }
+            ConditionType::Petrified => {
+                "Transformed to stone; incapacitated; attacks have advantage; resists all damage; immune to poison/disease."
+            }
+            ConditionType::Poisoned => "Disadvantage on attack rolls and ability checks.",
+            ConditionType::Prone => {
+                "Only crawl; attacks vs them have advantage if within 5 ft, otherwise disadvantage; their attacks have disadvantage."
+            }
+            ConditionType::Restrained => {
+                "Speed 0; attacks vs have advantage; their attacks have disadvantage; Dex saves at disadvantage."
+            }
+            ConditionType::Stunned => {
+                "Incapacitated; can't move; can speak falteringly; auto fail Str/Dex saves; attacks have advantage."
+            }
+            ConditionType::Unconscious => {
+                "Incapacitated; drops prone; drops what holds; auto fail Str/Dex saves; attacks have advantage and crit within 5 ft."
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

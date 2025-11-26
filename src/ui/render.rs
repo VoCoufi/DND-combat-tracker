@@ -81,6 +81,7 @@ pub fn render(f: &mut Frame, app: &App) {
         }
         InputMode::ActionMenu(selected) => render_action_menu(f, *selected),
         InputMode::CombatantMenu(selected) => render_combatant_menu(f, *selected),
+        InputMode::QuickReference => render_quick_reference(f, app),
         InputMode::Removing(state) => render_selection_modal(
             f,
             state,
@@ -227,6 +228,41 @@ fn render_log(f: &mut Frame, area: Rect, app: &App) {
 
     let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
 
+    f.render_widget(paragraph, area);
+}
+
+fn render_quick_reference(f: &mut Frame, _app: &App) {
+    let area = centered_rect(70, 80, f.area());
+
+    let mut lines = vec![Line::from(Span::styled(
+        "Condition Reference",
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    ))];
+    lines.push(Line::from(""));
+
+    for condition in ConditionType::all() {
+        lines.push(Line::from(vec![
+            Span::styled(
+                format!("{}: ", condition.as_str()),
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(condition.description()),
+        ]));
+        lines.push(Line::from(""));
+    }
+
+    let block = Block::default()
+        .title(" Quick Reference (?) ")
+        .borders(Borders::ALL)
+        .style(Style::default().fg(Color::White));
+
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
+
+    f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
 }
 

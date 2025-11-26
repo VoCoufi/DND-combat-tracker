@@ -78,6 +78,11 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
         }),
         InputMode::ActionMenu(selected) => handle_action_menu_mode(app, key, selected),
         InputMode::CombatantMenu(selected) => handle_combatant_menu_mode(app, key, selected),
+        InputMode::QuickReference => {
+            if let KeyCode::Esc | KeyCode::Char('q') = key.code {
+                app.cancel_input();
+            }
+        }
         InputMode::Removing(_) => handle_removing_mode(app, key),
     }
 }
@@ -98,6 +103,7 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
         KeyCode::Char('x') => app.start_clear_choice(),
         KeyCode::Char('m') => app.open_action_menu(),
         KeyCode::Char('b') => app.open_combatant_menu(),
+        KeyCode::Char('?') => app.input_mode = InputMode::QuickReference,
         _ => {}
     }
 }

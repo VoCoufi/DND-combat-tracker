@@ -27,6 +27,7 @@ pub enum InputMode {
     ActionMenu(usize),
     CombatantMenu(usize),
     GrantingTempHp(SelectionState),
+    QuickReference,
     Removing(SelectionState),
 }
 
