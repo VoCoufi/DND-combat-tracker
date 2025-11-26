@@ -1,5 +1,9 @@
 use crate::combat::CombatEncounter;
-use crate::models::{Combatant, ConcentrationInfo, ConditionType, DeathSaveOutcome, StatusEffect};
+use crate::models::{
+    Combatant, CombatantTemplate, ConcentrationInfo, ConditionType, DeathSaveOutcome, StatusEffect,
+};
+use std::fs;
+use std::path::Path;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum InputMode {
@@ -17,6 +21,8 @@ pub enum InputMode {
     ClearActionSelection(ClearAction),
     ClearingStatus(SelectionState),
     SelectingStatusToClear(StatusSelectionState),
+    SelectingTemplate(SelectionState),
+    SavingTemplate(SelectionState),
     Removing(SelectionState),
 }
 
@@ -28,6 +34,7 @@ pub struct AddCombatantState {
     pub hp: String,
     pub ac: String,
     pub is_player: String,
+    pub quantity: String,
 }
 
 impl Default for AddCombatantState {
@@ -39,6 +46,7 @@ impl Default for AddCombatantState {
             hp: String::new(),
             ac: String::new(),
             is_player: String::new(),
+            quantity: "1".to_string(),
         }
     }
 }
@@ -107,15 +115,18 @@ pub struct App {
     pub input_mode: InputMode,
     pub should_quit: bool,
     pub message: Option<String>,
+    pub templates: Vec<CombatantTemplate>,
 }
 
 impl App {
     pub fn new() -> Self {
+        let templates = load_templates();
         Self {
             encounter: CombatEncounter::new(),
             input_mode: InputMode::Normal,
             should_quit: false,
             message: None,
+            templates,
         }
     }
 
@@ -200,6 +211,24 @@ impl App {
         self.clear_message();
     }
 
+    pub fn start_selecting_template(&mut self) {
+        if self.templates.is_empty() {
+            self.set_message("No templates available".to_string());
+            return;
+        }
+        self.input_mode = InputMode::SelectingTemplate(SelectionState::default());
+        self.clear_message();
+    }
+
+    pub fn start_saving_template(&mut self) {
+        if self.encounter.combatants.is_empty() {
+            self.set_message("No combatants to save as template".to_string());
+            return;
+        }
+        self.input_mode = InputMode::SavingTemplate(SelectionState::default());
+        self.clear_message();
+    }
+
     pub fn cancel_input(&mut self) {
         self.input_mode = InputMode::Normal;
         self.clear_message();
@@ -214,15 +243,30 @@ impl App {
         let ac = state.ac.parse::<i32>().map_err(|_| "Invalid AC value")?;
         let is_player =
             state.is_player.to_lowercase() == "y" || state.is_player.to_lowercase() == "yes";
+        let quantity = state
+            .quantity
+            .parse::<usize>()
+            .map_err(|_| "Invalid quantity value")?;
 
         if state.name.is_empty() {
             return Err("Name cannot be empty".to_string());
         }
 
-        let combatant = Combatant::new(state.name.clone(), initiative, hp, ac, is_player);
-        self.encounter.add_combatant(combatant);
+        let qty = quantity.max(1);
+        for i in 0..qty {
+            let mut name = state.name.clone();
+            if qty > 1 {
+                name = format!("{} {}", state.name, i + 1);
+            }
+            let combatant = Combatant::new(name, initiative, hp, ac, is_player);
+            self.encounter.add_combatant(combatant);
+        }
         self.input_mode = InputMode::Normal;
-        self.set_message(format!("Added combatant: {}", state.name));
+        if qty > 1 {
+            self.set_message(format!("Added {} combatants: {} x{}", qty, state.name, qty));
+        } else {
+            self.set_message(format!("Added combatant: {}", state.name));
+        }
         Ok(())
     }
 
@@ -514,10 +558,84 @@ impl App {
         self.input_mode = InputMode::Normal;
         Ok(())
     }
+
+    pub fn add_combatant_from_template(&mut self, template_index: usize) -> Result<(), String> {
+        if template_index >= self.templates.len() {
+            return Err("Invalid template selection".to_string());
+        }
+        let tpl = self.templates[template_index].clone();
+        let combatant = Combatant::new(
+            tpl.name.clone(),
+            tpl.initiative,
+            tpl.hp_max,
+            tpl.armor_class,
+            tpl.is_player,
+        );
+        self.encounter.add_combatant(combatant);
+        self.input_mode = InputMode::Normal;
+        self.set_message(format!("Added combatant from template: {}", tpl.name));
+        Ok(())
+    }
+
+    pub fn save_template_from_combatant(&mut self, combatant_index: usize) -> Result<(), String> {
+        if combatant_index >= self.encounter.combatants.len() {
+            return Err("Invalid combatant index".to_string());
+        }
+        let c = &self.encounter.combatants[combatant_index];
+        let tpl = CombatantTemplate::from_stats(
+            c.name.clone(),
+            c.initiative,
+            c.hp_max,
+            c.armor_class,
+            c.is_player,
+        );
+
+        if let Some(existing) = self
+            .templates
+            .iter_mut()
+            .find(|t| t.name.to_lowercase() == tpl.name.to_lowercase())
+        {
+            *existing = tpl.clone();
+        } else {
+            self.templates.push(tpl.clone());
+        }
+
+        if let Err(err) = save_templates(&self.templates) {
+            self.set_message(format!(
+                "Saved template in memory but failed to write file: {}",
+                err
+            ));
+        } else {
+            self.set_message(format!("Saved template: {}", tpl.name));
+        }
+        self.input_mode = InputMode::Normal;
+        Ok(())
+    }
 }
 
 impl Default for App {
     fn default() -> Self {
         Self::new()
     }
+}
+
+fn templates_path() -> &'static str {
+    "templates.json"
+}
+
+fn load_templates() -> Vec<CombatantTemplate> {
+    let path = templates_path();
+    if !Path::new(path).exists() {
+        return Vec::new();
+    }
+    match fs::read_to_string(path) {
+        Ok(content) => serde_json::from_str(&content).unwrap_or_else(|_| Vec::new()),
+        Err(_) => Vec::new(),
+    }
+}
+
+fn save_templates(templates: &[CombatantTemplate]) -> Result<(), String> {
+    let path = templates_path();
+    let json = serde_json::to_string_pretty(templates).map_err(|e| e.to_string())?;
+    fs::write(path, json).map_err(|e| e.to_string())
 }

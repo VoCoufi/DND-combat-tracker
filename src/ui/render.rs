@@ -66,6 +66,10 @@ pub fn render(f: &mut Frame, app: &App) {
             render_selection_modal(f, state, "Clear Status Effects", "Select combatant:", app)
         }
         InputMode::SelectingStatusToClear(state) => render_status_clear_modal(f, state, app),
+        InputMode::SelectingTemplate(state) => render_template_selection_modal(f, state, app),
+        InputMode::SavingTemplate(state) => {
+            render_selection_modal(f, state, "Save Template", "Select combatant to save:", app)
+        }
         InputMode::Removing(state) => render_selection_modal(
             f,
             state,
@@ -154,7 +158,7 @@ fn render_combatants(f: &mut Frame, area: Rect, app: &App) {
 fn render_commands(f: &mut Frame, area: Rect, app: &App) {
     let commands = match app.input_mode {
         InputMode::Normal => {
-            "[n] Next Turn  [d] Damage  [h] Heal  [s] Status  [v] Death Save  [c] Concentration  [x] Clear  [a] Add  [r] Remove  [q] Quit"
+            "[n] Next Turn  [d] Damage  [h] Heal  [s] Status  [v] Death Save  [c] Concentration  [x] Clear  [t] Templates  [p] Save Template  [a] Add  [r] Remove  [q] Quit"
         }
         _ => "[Esc] Cancel",
     };
@@ -188,6 +192,7 @@ fn render_add_combatant_modal(f: &mut Frame, state: &AddCombatantState) {
         "Enter max HP:",
         "Enter AC:",
         "Is player? (y/n):",
+        "Quantity:",
     ];
 
     let values = [
@@ -196,6 +201,7 @@ fn render_add_combatant_modal(f: &mut Frame, state: &AddCombatantState) {
         &state.hp,
         &state.ac,
         &state.is_player,
+        &state.quantity,
     ];
 
     let mut lines = vec![];
@@ -644,6 +650,52 @@ fn render_clear_choice_modal(f: &mut Frame, choice: &ClearAction) {
 
     let block = Block::default()
         .title(" Clear Menu ")
+        .borders(Borders::ALL)
+        .style(Style::default().fg(Color::Yellow));
+
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
+
+    f.render_widget(Clear, area);
+    f.render_widget(paragraph, area);
+}
+
+fn render_template_selection_modal(f: &mut Frame, state: &SelectionState, app: &App) {
+    let area = centered_rect(60, 50, f.area());
+
+    let mut lines = vec![Line::from(Span::styled(
+        "Select template to add:",
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    ))];
+    lines.push(Line::from(""));
+
+    for (i, t) in app.templates.iter().enumerate() {
+        let selected = i == state.selected_index;
+        let style = if selected {
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::White)
+        };
+        let prefix = if selected { "> " } else { "  " };
+        lines.push(Line::from(Span::styled(
+            format!(
+                "{}{} (HP: {}, AC: {}, Init: {}, {})",
+                prefix,
+                t.name,
+                t.hp_max,
+                t.armor_class,
+                t.initiative,
+                if t.is_player { "PC" } else { "NPC" }
+            ),
+            style,
+        )));
+    }
+
+    let block = Block::default()
+        .title(" Templates ")
         .borders(Borders::ALL)
         .style(Style::default().fg(Color::Yellow));
 

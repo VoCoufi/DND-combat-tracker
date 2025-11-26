@@ -160,7 +160,7 @@ DMs may need to pause mid-combat (session ends, emergency) and resume later. Als
 ---
 
 ### 5. Bulk Add Combatants
-**Status**: ⚪ Planned
+**Status**: 🔴 Blocked
 **Difficulty**: Easy
 **Estimated Effort**: 1 day
 
@@ -229,7 +229,7 @@ Mistakes happen during fast-paced combat. DMs may misclick, enter wrong damage, 
 ---
 
 ### 7. Monster/Combatant Templates
-**Status**: ⚪ Planned
+**Status**: 🟢 Completed
 **Difficulty**: Medium
 **Estimated Effort**: 2-3 days
 

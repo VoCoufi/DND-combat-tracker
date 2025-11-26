@@ -64,6 +64,10 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
             }
         }),
         InputMode::SelectingStatusToClear(state) => handle_status_clear_selection(app, key, state),
+        InputMode::SelectingTemplate(state) => handle_template_selection_mode(app, key, state),
+        InputMode::SavingTemplate(_) => handle_selection_mode(app, key, |app, idx, _| {
+            let _ = app.save_template_from_combatant(idx);
+        }),
         InputMode::Removing(_) => handle_removing_mode(app, key),
     }
 }
@@ -82,6 +86,8 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
         KeyCode::Char('v') => app.start_rolling_death_save(),
         KeyCode::Char('c') => app.start_concentration_target(),
         KeyCode::Char('x') => app.start_clear_choice(),
+        KeyCode::Char('t') => app.start_selecting_template(),
+        KeyCode::Char('p') => app.start_saving_template(),
         KeyCode::Char('r') => app.start_removing(),
         _ => {}
     }
@@ -92,7 +98,7 @@ fn handle_add_combatant_mode(app: &mut App, key: KeyEvent) {
         match key.code {
             KeyCode::Esc => app.cancel_input(),
             KeyCode::Enter => {
-                if state.step < 4 {
+                if state.step < 5 {
                     state.step += 1;
                     app.input_mode = InputMode::AddingCombatant(state);
                 } else {
@@ -118,6 +124,9 @@ fn handle_add_combatant_mode(app: &mut App, key: KeyEvent) {
                     }
                     4 => {
                         state.is_player.pop();
+                    }
+                    5 => {
+                        state.quantity.pop();
                     }
                     _ => {}
                 }
@@ -147,6 +156,14 @@ fn handle_add_combatant_mode(app: &mut App, key: KeyEvent) {
                             state.is_player.push(c);
                         }
                     }
+                    5 => {
+                        if c.is_ascii_digit() {
+                            if state.quantity == "0" {
+                                state.quantity.clear();
+                            }
+                            state.quantity.push(c);
+                        }
+                    }
                     _ => {}
                 }
                 app.input_mode = InputMode::AddingCombatant(state);
@@ -169,6 +186,7 @@ where
             (state.selected_index, state.input.clone(), true)
         }
         InputMode::ClearingStatus(state) => (state.selected_index, state.input.clone(), true),
+        InputMode::SavingTemplate(state) => (state.selected_index, state.input.clone(), true),
         InputMode::SelectingStatusToClear(_) => return,
         _ => return,
     };
@@ -230,6 +248,8 @@ fn update_selection_state(app: &mut App, index: usize, input: String) {
                 selected_status_index: new_state.selected_index,
             })
         }
+        InputMode::SelectingTemplate(_) => InputMode::SelectingTemplate(new_state),
+        InputMode::SavingTemplate(_) => InputMode::SavingTemplate(new_state),
         InputMode::Removing(_) => InputMode::Removing(new_state),
         _ => app.input_mode.clone(),
     };
@@ -481,6 +501,39 @@ fn handle_status_clear_selection(app: &mut App, key: KeyEvent, state: StatusSele
         }
         KeyCode::Enter => {
             let _ = app.complete_clear_status_effect(combatant_index, Some(selected));
+        }
+        _ => {}
+    }
+}
+
+fn handle_template_selection_mode(app: &mut App, key: KeyEvent, state: SelectionState) {
+    let mut selected_index = state.selected_index;
+    let mut input = state.input.clone();
+
+    match key.code {
+        KeyCode::Esc => app.cancel_input(),
+        KeyCode::Up => {
+            if selected_index > 0 {
+                selected_index -= 1;
+            } else {
+                selected_index = app.templates.len().saturating_sub(1);
+            }
+            update_selection_state(app, selected_index, input);
+        }
+        KeyCode::Down => {
+            if selected_index + 1 < app.templates.len() {
+                selected_index += 1;
+            } else {
+                selected_index = 0;
+            }
+            update_selection_state(app, selected_index, input);
+        }
+        KeyCode::Enter => {
+            let _ = app.add_combatant_from_template(selected_index);
+        }
+        KeyCode::Backspace => {
+            input.pop();
+            update_selection_state(app, selected_index, input);
         }
         _ => {}
     }
