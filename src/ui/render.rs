@@ -23,11 +23,17 @@ pub fn render(f: &mut Frame, app: &App) {
         ])
         .split(f.area());
 
+    let content_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Min(40), Constraint::Length(40)])
+        .split(chunks[1]);
+
     // Render header
     render_header(f, chunks[0], app);
 
     // Render main content
-    render_combatants(f, chunks[1], app);
+    render_combatants(f, content_chunks[0], app);
+    render_log(f, content_chunks[1], app);
 
     // Render commands
     render_commands(f, chunks[2], app);
@@ -179,6 +185,43 @@ fn render_message(f: &mut Frame, area: Rect, msg: &str) {
     let paragraph = Paragraph::new(msg)
         .style(Style::default().fg(Color::Yellow))
         .alignment(Alignment::Center);
+
+    f.render_widget(paragraph, area);
+}
+
+fn render_log(f: &mut Frame, area: Rect, app: &App) {
+    let mut lines: Vec<Line> = app
+        .log
+        .iter()
+        .rev()
+        .take(5)
+        .rev()
+        .map(|entry| {
+            Line::from(vec![
+                Span::styled(
+                    format!("R{}: ", entry.round),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::raw(&entry.message),
+            ])
+        })
+        .collect();
+
+    if lines.is_empty() {
+        lines.push(Line::from(Span::styled(
+            "Log empty",
+            Style::default().fg(Color::DarkGray),
+        )));
+    }
+
+    let block = Block::default()
+        .title(" Log ")
+        .borders(Borders::ALL)
+        .style(Style::default().fg(Color::White));
+
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
 
     f.render_widget(paragraph, area);
 }
