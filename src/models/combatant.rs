@@ -162,3 +162,70 @@ impl Combatant {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::status::ConditionType;
+
+    fn player(name: &str, hp: i32) -> Combatant {
+        Combatant::new(name.to_string(), 10, hp, 10, true)
+    }
+
+    #[test]
+    fn temp_hp_absorbs_damage() {
+        let mut c = player("Hero", 20);
+        c.grant_temp_hp(5);
+        c.take_damage(3);
+        assert_eq!(c.temp_hp, 2);
+        assert_eq!(c.hp_current, 20);
+        c.take_damage(5);
+        assert_eq!(c.temp_hp, 0);
+        assert_eq!(c.hp_current, 17);
+    }
+
+    #[test]
+    fn temp_hp_replaces_only_if_higher() {
+        let mut c = player("Hero", 10);
+        c.grant_temp_hp(5);
+        c.grant_temp_hp(3);
+        assert_eq!(c.temp_hp, 5);
+    }
+
+    #[test]
+    fn heal_caps_at_max() {
+        let mut c = player("Hero", 10);
+        c.take_damage(9);
+        c.heal(20);
+        assert_eq!(c.hp_current, 10);
+    }
+
+    #[test]
+    fn death_save_crit_success_revives() {
+        let mut c = player("Hero", 10);
+        c.take_damage(15);
+        let outcome = c.apply_death_save_roll(20);
+        assert_eq!(outcome, DeathSaveOutcome::Revived);
+        assert_eq!(c.hp_current, 1);
+        assert!(c.death_saves.is_none());
+    }
+
+    #[test]
+    fn death_save_crit_fail_counts_two() {
+        let mut c = player("Hero", 10);
+        c.take_damage(11);
+        let _ = c.apply_death_save_roll(1);
+        let ds = c.death_saves.as_ref().unwrap();
+        assert_eq!(ds.failures, 2);
+        assert_eq!(ds.successes, 0);
+    }
+
+    #[test]
+    fn add_status_replaces_same_condition() {
+        let mut c = player("Hero", 10);
+        c.add_status_effect(StatusEffect::new(ConditionType::Poisoned, 3, None));
+        c.add_status_effect(StatusEffect::new(ConditionType::Poisoned, 5, None));
+        assert_eq!(c.status_effects.len(), 1);
+        assert_eq!(c.status_effects[0].duration, 5);
+    }
+}
