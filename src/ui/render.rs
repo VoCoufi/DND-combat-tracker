@@ -660,6 +660,13 @@ fn render_clear_choice_modal(f: &mut Frame, choice: &ClearAction) {
 fn render_template_selection_modal(f: &mut Frame, state: &SelectionState, app: &App) {
     let area = centered_rect(60, 50, f.area());
 
+    let filtered: Vec<&crate::models::CombatantTemplate> = app
+        .templates
+        .iter()
+        .filter(|t| t.name.to_lowercase().contains(&state.input.to_lowercase()))
+        .collect();
+    let selected_index = state.selected_index.min(filtered.len().saturating_sub(1));
+
     let mut lines = vec![Line::from(Span::styled(
         "Select template to add:",
         Style::default()
@@ -668,8 +675,8 @@ fn render_template_selection_modal(f: &mut Frame, state: &SelectionState, app: &
     ))];
     lines.push(Line::from(""));
 
-    for (i, t) in app.templates.iter().enumerate() {
-        let selected = i == state.selected_index;
+    for (i, t) in filtered.iter().enumerate() {
+        let selected = i == selected_index;
         let style = if selected {
             Style::default()
                 .fg(Color::Yellow)
@@ -690,6 +697,17 @@ fn render_template_selection_modal(f: &mut Frame, state: &SelectionState, app: &
             style,
         )));
     }
+
+    lines.push(Line::from(""));
+    lines.push(Line::from(vec![
+        Span::raw("Filter: "),
+        Span::styled(
+            state.input.clone(),
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        ),
+    ]));
 
     let block = Block::default()
         .title(" Templates ")

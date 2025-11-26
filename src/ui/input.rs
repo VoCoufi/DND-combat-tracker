@@ -498,31 +498,52 @@ fn handle_status_clear_selection(app: &mut App, key: KeyEvent, state: StatusSele
 fn handle_template_selection_mode(app: &mut App, key: KeyEvent, state: SelectionState) {
     let mut selected_index = state.selected_index;
     let mut input = state.input.clone();
+    let filtered: Vec<usize> = app
+        .templates
+        .iter()
+        .enumerate()
+        .filter(|(_, t)| t.name.to_lowercase().contains(&input.to_lowercase()))
+        .map(|(idx, _)| idx)
+        .collect();
 
     match key.code {
         KeyCode::Esc => app.cancel_input(),
         KeyCode::Up => {
-            if selected_index > 0 {
-                selected_index -= 1;
-            } else {
-                selected_index = app.templates.len().saturating_sub(1);
+            if !filtered.is_empty() {
+                if selected_index > 0 {
+                    selected_index -= 1;
+                } else {
+                    selected_index = filtered.len().saturating_sub(1);
+                }
             }
             update_selection_state(app, selected_index, input);
         }
         KeyCode::Down => {
-            if selected_index + 1 < app.templates.len() {
-                selected_index += 1;
-            } else {
-                selected_index = 0;
+            if !filtered.is_empty() {
+                if selected_index + 1 < filtered.len() {
+                    selected_index += 1;
+                } else {
+                    selected_index = 0;
+                }
             }
             update_selection_state(app, selected_index, input);
         }
         KeyCode::Enter => {
-            let _ = app.add_combatant_from_template(selected_index);
+            if let Some(&tpl_idx) = filtered.get(selected_index) {
+                let _ = app.add_combatant_from_template(tpl_idx);
+            } else {
+                app.set_message("No matching template".to_string());
+                app.input_mode = InputMode::Normal;
+            }
         }
         KeyCode::Backspace => {
             input.pop();
             update_selection_state(app, selected_index, input);
+        }
+        KeyCode::Char(c) => {
+            input.push(c);
+            // Reset selection to 0 on new filter
+            update_selection_state(app, 0, input);
         }
         _ => {}
     }
