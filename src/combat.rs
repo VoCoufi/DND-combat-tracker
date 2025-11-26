@@ -89,3 +89,52 @@ impl Default for CombatEncounter {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::Combatant;
+
+    fn combatant(name: &str, init: i32) -> Combatant {
+        Combatant::new(name.to_string(), init, 10, 10, false)
+    }
+
+    #[test]
+    fn add_combatant_sorts_by_initiative() {
+        let mut enc = CombatEncounter::new();
+        enc.add_combatant(combatant("A", 5));
+        enc.add_combatant(combatant("B", 15));
+        enc.add_combatant(combatant("C", 10));
+        let names: Vec<_> = enc.combatants.iter().map(|c| c.name.as_str()).collect();
+        assert_eq!(names, vec!["B", "C", "A"]);
+        assert_eq!(enc.current_turn_index, 0);
+    }
+
+    #[test]
+    fn next_turn_wraps_and_increments_round() {
+        let mut enc = CombatEncounter::new();
+        enc.add_combatant(combatant("A", 5));
+        enc.add_combatant(combatant("B", 15));
+        assert_eq!(enc.round_number, 1);
+        enc.next_turn();
+        assert_eq!(enc.current_turn_index, 1);
+        assert_eq!(enc.round_number, 1);
+        enc.next_turn();
+        assert_eq!(enc.current_turn_index, 0);
+        assert_eq!(enc.round_number, 2);
+    }
+
+    #[test]
+    fn previous_turn_wraps_backwards() {
+        let mut enc = CombatEncounter::new();
+        enc.add_combatant(combatant("A", 5));
+        enc.add_combatant(combatant("B", 15));
+        enc.next_turn(); // move to second combatant
+        enc.previous_turn();
+        assert_eq!(enc.current_turn_index, 0);
+        assert_eq!(enc.round_number, 1);
+        enc.previous_turn();
+        assert_eq!(enc.current_turn_index, 1);
+        assert_eq!(enc.round_number, 1); // does not drop below 1
+    }
+}

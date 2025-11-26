@@ -129,3 +129,25 @@ impl StatusEffect {
         self.duration < 0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn timed_status_expires_below_zero() {
+        let mut s = StatusEffect::new(ConditionType::Poisoned, 2, None);
+        s.decrement_duration();
+        assert_eq!(s.duration, 1);
+        assert!(!s.is_expired());
+        s.decrement_duration();
+        assert_eq!(s.duration, -1);
+        assert!(s.is_expired());
+    }
+
+    #[test]
+    fn indefinite_status_not_expired() {
+        let s = StatusEffect::new(ConditionType::Prone, 0, None);
+        assert!(!s.is_expired());
+    }
+}
