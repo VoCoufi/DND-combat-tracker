@@ -81,7 +81,7 @@ pub fn render(f: &mut Frame, app: &App) {
         }
         InputMode::ActionMenu(selected) => render_action_menu(f, *selected),
         InputMode::CombatantMenu(selected) => render_combatant_menu(f, *selected),
-        InputMode::QuickReference => render_quick_reference(f, app),
+        InputMode::QuickReference(selected) => render_quick_reference(f, *selected, app),
         InputMode::Removing(state) => render_selection_modal(
             f,
             state,
@@ -231,28 +231,54 @@ fn render_log(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(paragraph, area);
 }
 
-fn render_quick_reference(f: &mut Frame, _app: &App) {
+fn render_quick_reference(f: &mut Frame, selected_index: usize, app: &App) {
     let area = centered_rect(70, 80, f.area());
 
     let mut lines = vec![Line::from(Span::styled(
-        "Condition Reference",
+        "Condition Reference (↑/↓, Esc to close)",
         Style::default()
             .fg(Color::Cyan)
             .add_modifier(Modifier::BOLD),
     ))];
     lines.push(Line::from(""));
 
-    for condition in ConditionType::all() {
+    let conditions = ConditionType::all();
+    let max_visible = 8;
+    let start = if selected_index + 1 > max_visible {
+        selected_index + 1 - max_visible
+    } else {
+        0
+    };
+    let end = (start + max_visible).min(conditions.len());
+
+    if start > 0 {
+        lines.push(Line::from(Span::styled(
+            "… more above …",
+            Style::default().fg(Color::DarkGray),
+        )));
+    }
+
+    for (idx, condition) in conditions.iter().enumerate().skip(start).take(max_visible) {
+        let selected = idx == selected_index;
+        let title_style = if selected {
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::Yellow)
+        };
         lines.push(Line::from(vec![
-            Span::styled(
-                format!("{}: ", condition.as_str()),
-                Style::default()
-                    .fg(Color::Yellow)
-                    .add_modifier(Modifier::BOLD),
-            ),
+            Span::styled(format!("{}: ", condition.as_str()), title_style),
             Span::raw(condition.description()),
         ]));
         lines.push(Line::from(""));
+    }
+
+    if end < conditions.len() {
+        lines.push(Line::from(Span::styled(
+            "… more below …",
+            Style::default().fg(Color::DarkGray),
+        )));
     }
 
     let block = Block::default()

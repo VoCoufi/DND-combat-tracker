@@ -78,11 +78,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
         }),
         InputMode::ActionMenu(selected) => handle_action_menu_mode(app, key, selected),
         InputMode::CombatantMenu(selected) => handle_combatant_menu_mode(app, key, selected),
-        InputMode::QuickReference => {
-            if let KeyCode::Esc | KeyCode::Char('q') = key.code {
-                app.cancel_input();
-            }
-        }
+        InputMode::QuickReference(selected) => handle_quick_reference_mode(app, key, selected),
         InputMode::Removing(_) => handle_removing_mode(app, key),
     }
 }
@@ -103,7 +99,7 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
         KeyCode::Char('x') => app.start_clear_choice(),
         KeyCode::Char('m') => app.open_action_menu(),
         KeyCode::Char('b') => app.open_combatant_menu(),
-        KeyCode::Char('?') => app.input_mode = InputMode::QuickReference,
+        KeyCode::Char('?') => app.input_mode = InputMode::QuickReference(0),
         _ => {}
     }
 }
@@ -193,7 +189,9 @@ where
         InputMode::SavingTemplate(state) => (state.selected_index, state.input.clone(), true),
         InputMode::GrantingTempHp(state) => (state.selected_index, state.input.clone(), false),
         InputMode::SelectingStatusToClear(_) => return,
-        InputMode::ActionMenu(_) | InputMode::CombatantMenu(_) => return,
+        InputMode::ActionMenu(_) | InputMode::CombatantMenu(_) | InputMode::QuickReference(_) => {
+            return;
+        }
         _ => return,
     };
 
@@ -415,6 +413,30 @@ fn handle_concentration_check_mode(app: &mut App, key: KeyEvent, state: Concentr
                 app.set_message("Invalid roll total".to_string());
                 app.input_mode = InputMode::Normal;
             }
+        }
+        _ => {}
+    }
+}
+
+fn handle_quick_reference_mode(app: &mut App, key: KeyEvent, selected_index: usize) {
+    let total = crate::models::ConditionType::all().len();
+    match key.code {
+        KeyCode::Esc | KeyCode::Char('q') => app.cancel_input(),
+        KeyCode::Up => {
+            let new_idx = if selected_index > 0 {
+                selected_index - 1
+            } else {
+                total.saturating_sub(1)
+            };
+            app.input_mode = InputMode::QuickReference(new_idx);
+        }
+        KeyCode::Down => {
+            let new_idx = if selected_index + 1 < total {
+                selected_index + 1
+            } else {
+                0
+            };
+            app.input_mode = InputMode::QuickReference(new_idx);
         }
         _ => {}
     }
