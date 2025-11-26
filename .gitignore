@@ -3,3 +3,6 @@
 
 # Generated data
 templates.json
+
+# Build artifacts
+/target/
