@@ -666,6 +666,13 @@ fn render_template_selection_modal(f: &mut Frame, state: &SelectionState, app: &
         .filter(|t| t.name.to_lowercase().contains(&state.input.to_lowercase()))
         .collect();
     let selected_index = state.selected_index.min(filtered.len().saturating_sub(1));
+    let max_visible = 10;
+    let start = if selected_index + 1 > max_visible {
+        selected_index + 1 - max_visible
+    } else {
+        0
+    };
+    let end = (start + max_visible).min(filtered.len());
 
     let mut lines = vec![Line::from(Span::styled(
         "Select template to add:",
@@ -675,8 +682,15 @@ fn render_template_selection_modal(f: &mut Frame, state: &SelectionState, app: &
     ))];
     lines.push(Line::from(""));
 
-    for (i, t) in filtered.iter().enumerate() {
-        let selected = i == selected_index;
+    if start > 0 {
+        lines.push(Line::from(Span::styled(
+            "… more above …",
+            Style::default().fg(Color::DarkGray),
+        )));
+    }
+
+    for (visible_idx, t) in filtered.iter().enumerate().skip(start).take(max_visible) {
+        let selected = visible_idx == selected_index;
         let style = if selected {
             Style::default()
                 .fg(Color::Yellow)
@@ -687,14 +701,22 @@ fn render_template_selection_modal(f: &mut Frame, state: &SelectionState, app: &
         let prefix = if selected { "> " } else { "  " };
         lines.push(Line::from(Span::styled(
             format!(
-                "{}{} (HP: {}, AC: {}, {})",
+                "{}{}. {} (HP: {}, AC: {}, {})",
                 prefix,
+                visible_idx + 1,
                 t.name,
                 t.hp_max,
                 t.armor_class,
                 if t.is_player { "PC" } else { "NPC" }
             ),
             style,
+        )));
+    }
+
+    if end < filtered.len() {
+        lines.push(Line::from(Span::styled(
+            "… more below …",
+            Style::default().fg(Color::DarkGray),
         )));
     }
 
