@@ -88,11 +88,8 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
         KeyCode::Char('v') => app.start_rolling_death_save(),
         KeyCode::Char('c') => app.start_concentration_target(),
         KeyCode::Char('x') => app.start_clear_choice(),
-        KeyCode::Char('t') => app.start_selecting_template(),
-        KeyCode::Char('p') => app.start_saving_template(),
         KeyCode::Char('m') => app.open_action_menu(),
         KeyCode::Char('b') => app.open_combatant_menu(),
-        KeyCode::Char('r') => app.start_removing(),
         _ => {}
     }
 }

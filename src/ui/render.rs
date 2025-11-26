@@ -159,9 +159,7 @@ fn render_combatants(f: &mut Frame, area: Rect, app: &App) {
 
 fn render_commands(f: &mut Frame, area: Rect, app: &App) {
     let commands = match app.input_mode {
-        InputMode::Normal => {
-            "[n] Next Turn  [m] Action Menu  [b] Combatant Menu  [t] Templates  [p] Save Template  [a] Add  [r] Remove  [q] Quit"
-        }
+        InputMode::Normal => "[n] Next Turn  [m] Action Menu  [b] Combatant Menu  [q] Quit",
         _ => "[Esc] Cancel",
     };
 
