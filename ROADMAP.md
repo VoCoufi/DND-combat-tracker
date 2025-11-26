@@ -386,7 +386,7 @@ Mistakes in data entry, or changing circumstances (PC gains temporary AC buff, n
 ---
 
 ### 12. Temporary HP
-**Status**: ⚪ Planned
+**Status**: 🟢 Completed
 **Difficulty**: Easy
 **Estimated Effort**: 1 day
 
@@ -484,7 +484,7 @@ Some effects require re-rolling initiative, or DM may want to randomize turn ord
 ---
 
 ### 15. Quick Reference Panel
-**Status**: ⚪ Planned
+**Status**: 🟢 Completed
 **Difficulty**: Easy
 **Estimated Effort**: 1 day
 
@@ -796,7 +796,7 @@ Integration with virtual tabletops, Discord bots, custom tools.
 Architectural enhancements and code quality improvements.
 
 ### 26. Unit Testing
-**Status**: ⚪ Planned
+**Status**: 🟢 Completed
 **Difficulty**: Medium
 **Estimated Effort**: 3-4 days
 
