@@ -192,7 +192,6 @@ fn render_add_combatant_modal(f: &mut Frame, state: &AddCombatantState) {
         "Enter max HP:",
         "Enter AC:",
         "Is player? (y/n):",
-        "Quantity:",
     ];
 
     let values = [
@@ -201,7 +200,6 @@ fn render_add_combatant_modal(f: &mut Frame, state: &AddCombatantState) {
         &state.hp,
         &state.ac,
         &state.is_player,
-        &state.quantity,
     ];
 
     let mut lines = vec![];

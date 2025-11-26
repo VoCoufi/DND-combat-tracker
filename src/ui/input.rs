@@ -98,7 +98,7 @@ fn handle_add_combatant_mode(app: &mut App, key: KeyEvent) {
         match key.code {
             KeyCode::Esc => app.cancel_input(),
             KeyCode::Enter => {
-                if state.step < 5 {
+                if state.step < 4 {
                     state.step += 1;
                     app.input_mode = InputMode::AddingCombatant(state);
                 } else {
@@ -124,9 +124,6 @@ fn handle_add_combatant_mode(app: &mut App, key: KeyEvent) {
                     }
                     4 => {
                         state.is_player.pop();
-                    }
-                    5 => {
-                        state.quantity.pop();
                     }
                     _ => {}
                 }
@@ -154,14 +151,6 @@ fn handle_add_combatant_mode(app: &mut App, key: KeyEvent) {
                         if c == 'y' || c == 'n' || c == 'Y' || c == 'N' {
                             state.is_player.clear();
                             state.is_player.push(c);
-                        }
-                    }
-                    5 => {
-                        if c.is_ascii_digit() {
-                            if state.quantity == "0" {
-                                state.quantity.clear();
-                            }
-                            state.quantity.push(c);
                         }
                     }
                     _ => {}

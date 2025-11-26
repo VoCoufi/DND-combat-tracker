@@ -34,7 +34,6 @@ pub struct AddCombatantState {
     pub hp: String,
     pub ac: String,
     pub is_player: String,
-    pub quantity: String,
 }
 
 impl Default for AddCombatantState {
@@ -46,7 +45,6 @@ impl Default for AddCombatantState {
             hp: String::new(),
             ac: String::new(),
             is_player: String::new(),
-            quantity: "1".to_string(),
         }
     }
 }
@@ -243,30 +241,15 @@ impl App {
         let ac = state.ac.parse::<i32>().map_err(|_| "Invalid AC value")?;
         let is_player =
             state.is_player.to_lowercase() == "y" || state.is_player.to_lowercase() == "yes";
-        let quantity = state
-            .quantity
-            .parse::<usize>()
-            .map_err(|_| "Invalid quantity value")?;
 
         if state.name.is_empty() {
             return Err("Name cannot be empty".to_string());
         }
 
-        let qty = quantity.max(1);
-        for i in 0..qty {
-            let mut name = state.name.clone();
-            if qty > 1 {
-                name = format!("{} {}", state.name, i + 1);
-            }
-            let combatant = Combatant::new(name, initiative, hp, ac, is_player);
-            self.encounter.add_combatant(combatant);
-        }
+        let combatant = Combatant::new(state.name.clone(), initiative, hp, ac, is_player);
+        self.encounter.add_combatant(combatant);
         self.input_mode = InputMode::Normal;
-        if qty > 1 {
-            self.set_message(format!("Added {} combatants: {} x{}", qty, state.name, qty));
-        } else {
-            self.set_message(format!("Added combatant: {}", state.name));
-        }
+        self.set_message(format!("Added combatant: {}", state.name));
         Ok(())
     }
 
