@@ -70,6 +70,8 @@ pub fn render(f: &mut Frame, app: &App) {
         InputMode::SavingTemplate(state) => {
             render_selection_modal(f, state, "Save Template", "Select combatant to save:", app)
         }
+        InputMode::ActionMenu(selected) => render_action_menu(f, *selected),
+        InputMode::CombatantMenu(selected) => render_combatant_menu(f, *selected),
         InputMode::Removing(state) => render_selection_modal(
             f,
             state,
@@ -158,7 +160,7 @@ fn render_combatants(f: &mut Frame, area: Rect, app: &App) {
 fn render_commands(f: &mut Frame, area: Rect, app: &App) {
     let commands = match app.input_mode {
         InputMode::Normal => {
-            "[n] Next Turn  [d] Damage  [h] Heal  [s] Status  [v] Death Save  [c] Concentration  [x] Clear  [t] Templates  [p] Save Template  [a] Add  [r] Remove  [q] Quit"
+            "[n] Next Turn  [m] Action Menu  [b] Combatant Menu  [t] Templates  [p] Save Template  [a] Add  [r] Remove  [q] Quit"
         }
         _ => "[Esc] Cancel",
     };
@@ -648,6 +650,94 @@ fn render_clear_choice_modal(f: &mut Frame, choice: &ClearAction) {
 
     let block = Block::default()
         .title(" Clear Menu ")
+        .borders(Borders::ALL)
+        .style(Style::default().fg(Color::Yellow));
+
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
+
+    f.render_widget(Clear, area);
+    f.render_widget(paragraph, area);
+}
+
+fn render_action_menu(f: &mut Frame, selected: usize) {
+    let area = centered_rect(50, 40, f.area());
+    let items = [
+        "Deal Damage",
+        "Heal",
+        "Add Status Effect",
+        "Roll Death Save",
+        "Set Concentration",
+        "Clear Concentration/Status",
+    ];
+
+    let mut lines = vec![Line::from(Span::styled(
+        "Action Menu",
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    ))];
+    lines.push(Line::from(""));
+
+    for (i, label) in items.iter().enumerate() {
+        let selected_style = if i == selected {
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::White)
+        };
+        let prefix = if i == selected { "> " } else { "  " };
+        lines.push(Line::from(Span::styled(
+            format!("{}{}", prefix, label),
+            selected_style,
+        )));
+    }
+
+    let block = Block::default()
+        .title(" Actions ")
+        .borders(Borders::ALL)
+        .style(Style::default().fg(Color::Yellow));
+
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
+
+    f.render_widget(Clear, area);
+    f.render_widget(paragraph, area);
+}
+
+fn render_combatant_menu(f: &mut Frame, selected: usize) {
+    let area = centered_rect(50, 40, f.area());
+    let items = [
+        "Add Combatant",
+        "Remove Combatant",
+        "Add from Template",
+        "Save as Template",
+    ];
+
+    let mut lines = vec![Line::from(Span::styled(
+        "Combatant Menu",
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    ))];
+    lines.push(Line::from(""));
+
+    for (i, label) in items.iter().enumerate() {
+        let selected_style = if i == selected {
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::White)
+        };
+        let prefix = if i == selected { "> " } else { "  " };
+        lines.push(Line::from(Span::styled(
+            format!("{}{}", prefix, label),
+            selected_style,
+        )));
+    }
+
+    let block = Block::default()
+        .title(" Combatants ")
         .borders(Borders::ALL)
         .style(Style::default().fg(Color::Yellow));
 

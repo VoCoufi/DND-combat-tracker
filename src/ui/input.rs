@@ -68,6 +68,8 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
         InputMode::SavingTemplate(_) => handle_selection_mode(app, key, |app, idx, _| {
             let _ = app.save_template_from_combatant(idx);
         }),
+        InputMode::ActionMenu(selected) => handle_action_menu_mode(app, key, selected),
+        InputMode::CombatantMenu(selected) => handle_combatant_menu_mode(app, key, selected),
         InputMode::Removing(_) => handle_removing_mode(app, key),
     }
 }
@@ -88,6 +90,8 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
         KeyCode::Char('x') => app.start_clear_choice(),
         KeyCode::Char('t') => app.start_selecting_template(),
         KeyCode::Char('p') => app.start_saving_template(),
+        KeyCode::Char('m') => app.open_action_menu(),
+        KeyCode::Char('b') => app.open_combatant_menu(),
         KeyCode::Char('r') => app.start_removing(),
         _ => {}
     }
@@ -456,6 +460,113 @@ fn handle_clear_choice_mode(app: &mut App, key: KeyEvent, choice: ClearAction) {
     }
 }
 
+#[derive(Clone, Copy)]
+enum ActionMenuItem {
+    Damage,
+    Heal,
+    AddStatus,
+    DeathSave,
+    Concentration,
+    ClearMenu,
+}
+
+fn action_menu_items() -> Vec<(ActionMenuItem, &'static str)> {
+    vec![
+        (ActionMenuItem::Damage, "Deal Damage"),
+        (ActionMenuItem::Heal, "Heal"),
+        (ActionMenuItem::AddStatus, "Add Status Effect"),
+        (ActionMenuItem::DeathSave, "Roll Death Save"),
+        (ActionMenuItem::Concentration, "Set Concentration"),
+        (ActionMenuItem::ClearMenu, "Clear Concentration/Status"),
+    ]
+}
+
+fn handle_action_menu_mode(app: &mut App, key: KeyEvent, selected_index: usize) {
+    let items = action_menu_items();
+    match key.code {
+        KeyCode::Esc => app.cancel_input(),
+        KeyCode::Up => {
+            let new_idx = if selected_index > 0 {
+                selected_index - 1
+            } else {
+                items.len().saturating_sub(1)
+            };
+            app.input_mode = InputMode::ActionMenu(new_idx);
+        }
+        KeyCode::Down => {
+            let new_idx = if selected_index + 1 < items.len() {
+                selected_index + 1
+            } else {
+                0
+            };
+            app.input_mode = InputMode::ActionMenu(new_idx);
+        }
+        KeyCode::Enter => {
+            if let Some((action, _)) = items.get(selected_index) {
+                match action {
+                    ActionMenuItem::Damage => app.start_dealing_damage(),
+                    ActionMenuItem::Heal => app.start_healing(),
+                    ActionMenuItem::AddStatus => app.start_adding_status(),
+                    ActionMenuItem::DeathSave => app.start_rolling_death_save(),
+                    ActionMenuItem::Concentration => app.start_concentration_target(),
+                    ActionMenuItem::ClearMenu => app.start_clear_choice(),
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+#[derive(Clone, Copy)]
+enum CombatantMenuItem {
+    AddCombatant,
+    RemoveCombatant,
+    LoadTemplate,
+    SaveTemplate,
+}
+
+fn combatant_menu_items() -> Vec<(CombatantMenuItem, &'static str)> {
+    vec![
+        (CombatantMenuItem::AddCombatant, "Add Combatant"),
+        (CombatantMenuItem::RemoveCombatant, "Remove Combatant"),
+        (CombatantMenuItem::LoadTemplate, "Add from Template"),
+        (CombatantMenuItem::SaveTemplate, "Save as Template"),
+    ]
+}
+
+fn handle_combatant_menu_mode(app: &mut App, key: KeyEvent, selected_index: usize) {
+    let items = combatant_menu_items();
+    match key.code {
+        KeyCode::Esc => app.cancel_input(),
+        KeyCode::Up => {
+            let new_idx = if selected_index > 0 {
+                selected_index - 1
+            } else {
+                items.len().saturating_sub(1)
+            };
+            app.input_mode = InputMode::CombatantMenu(new_idx);
+        }
+        KeyCode::Down => {
+            let new_idx = if selected_index + 1 < items.len() {
+                selected_index + 1
+            } else {
+                0
+            };
+            app.input_mode = InputMode::CombatantMenu(new_idx);
+        }
+        KeyCode::Enter => {
+            if let Some((action, _)) = items.get(selected_index) {
+                match action {
+                    CombatantMenuItem::AddCombatant => app.start_adding_combatant(),
+                    CombatantMenuItem::RemoveCombatant => app.start_removing(),
+                    CombatantMenuItem::LoadTemplate => app.start_selecting_template(),
+                    CombatantMenuItem::SaveTemplate => app.start_saving_template(),
+                }
+            }
+        }
+        _ => {}
+    }
+}
 fn handle_status_clear_selection(app: &mut App, key: KeyEvent, state: StatusSelectionState) {
     let mut selected = state.selected_status_index;
     let combatant_index = state.combatant_index;

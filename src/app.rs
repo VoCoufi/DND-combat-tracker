@@ -23,6 +23,8 @@ pub enum InputMode {
     SelectingStatusToClear(StatusSelectionState),
     SelectingTemplate(SelectionState),
     SavingTemplate(SelectionState),
+    ActionMenu(usize),
+    CombatantMenu(usize),
     Removing(SelectionState),
 }
 
@@ -206,6 +208,16 @@ impl App {
 
     pub fn start_clear_choice(&mut self) {
         self.input_mode = InputMode::ClearActionSelection(ClearAction::Concentration);
+        self.clear_message();
+    }
+
+    pub fn open_action_menu(&mut self) {
+        self.input_mode = InputMode::ActionMenu(0);
+        self.clear_message();
+    }
+
+    pub fn open_combatant_menu(&mut self) {
+        self.input_mode = InputMode::CombatantMenu(0);
         self.clear_message();
     }
 
