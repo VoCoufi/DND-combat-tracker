@@ -76,6 +76,9 @@ pub fn render(f: &mut Frame, app: &App) {
         InputMode::SavingTemplate(state) => {
             render_selection_modal(f, state, "Save Template", "Select combatant to save:", app)
         }
+        InputMode::GrantingTempHp(state) => {
+            render_selection_modal(f, state, "Grant Temp HP", "Enter temp HP amount:", app)
+        }
         InputMode::ActionMenu(selected) => render_action_menu(f, *selected),
         InputMode::CombatantMenu(selected) => render_combatant_menu(f, *selected),
         InputMode::Removing(state) => render_selection_modal(
@@ -143,6 +146,7 @@ fn render_combatants(f: &mut Frame, area: Rect, app: &App) {
                 Span::styled(hp_bar, hp_style),
                 Span::raw(" "),
                 Span::styled(format!("{}/{}", c.hp_current, c.hp_max), hp_style),
+                temp_hp_span(c),
                 death_save_span(c),
                 concentration_span(c),
                 Span::raw(format!("  AC: {}  ", c.armor_class)),
@@ -537,6 +541,17 @@ fn death_save_span(combatant: &Combatant) -> Span<'static> {
     }
 }
 
+fn temp_hp_span(combatant: &Combatant) -> Span<'static> {
+    if combatant.temp_hp > 0 {
+        Span::styled(
+            format!(" (+{} temp)", combatant.temp_hp),
+            Style::default().fg(Color::Cyan),
+        )
+    } else {
+        Span::raw("")
+    }
+}
+
 fn concentration_span(combatant: &Combatant) -> Span<'static> {
     if let Some(info) = &combatant.concentration {
         let text = format!(" [Conc: {}]", info.spell_name);
@@ -709,6 +724,7 @@ fn render_action_menu(f: &mut Frame, selected: usize) {
         "Roll Death Save",
         "Set Concentration",
         "Clear Concentration/Status",
+        "Grant Temp HP",
     ];
 
     let mut lines = vec![Line::from(Span::styled(

@@ -1,6 +1,7 @@
 use crate::combat::CombatEncounter;
 use crate::models::{
-    Combatant, CombatantTemplate, ConcentrationInfo, ConditionType, DeathSaveOutcome, StatusEffect,
+    Combatant, CombatantTemplate, ConcentrationInfo, ConditionType, DeathSaveOutcome, LogEntry,
+    StatusEffect,
 };
 use std::fs;
 use std::path::Path;
@@ -25,6 +26,7 @@ pub enum InputMode {
     SavingTemplate(SelectionState),
     ActionMenu(usize),
     CombatantMenu(usize),
+    GrantingTempHp(SelectionState),
     Removing(SelectionState),
 }
 
@@ -116,6 +118,7 @@ pub struct App {
     pub should_quit: bool,
     pub message: Option<String>,
     pub templates: Vec<CombatantTemplate>,
+    pub log: Vec<LogEntry>,
 }
 
 impl App {
@@ -127,6 +130,7 @@ impl App {
             should_quit: false,
             message: None,
             templates,
+            log: Vec::new(),
         }
     }
 
@@ -221,6 +225,15 @@ impl App {
         self.clear_message();
     }
 
+    pub fn start_granting_temp_hp(&mut self) {
+        if self.encounter.combatants.is_empty() {
+            self.set_message("No combatants to grant temp HP!".to_string());
+            return;
+        }
+        self.input_mode = InputMode::GrantingTempHp(SelectionState::default());
+        self.clear_message();
+    }
+
     pub fn start_selecting_template(&mut self) {
         if self.templates.is_empty() {
             self.set_message("No templates available".to_string());
@@ -262,6 +275,14 @@ impl App {
         self.encounter.add_combatant(combatant);
         self.input_mode = InputMode::Normal;
         self.set_message(format!("Added combatant: {}", state.name));
+        self.push_log(format!(
+            "Added {} (HP {}, AC {}, Init {}, {})",
+            state.name,
+            hp,
+            ac,
+            initiative,
+            if is_player { "PC" } else { "NPC" }
+        ));
         Ok(())
     }
 
@@ -320,8 +341,9 @@ impl App {
         if let Some(extra) = extra_message {
             self.set_message(format!("{} | {}", base, extra));
         } else {
-            self.set_message(base);
+            self.set_message(base.clone());
         }
+        self.push_log(base);
         Ok(())
     }
 
@@ -341,7 +363,26 @@ impl App {
         }
 
         self.input_mode = InputMode::Normal;
-        self.set_message(format!("{} healed {} HP (HP: {})", name, amount, hp));
+        let msg = format!("{} healed {} HP (HP: {})", name, amount, hp);
+        self.set_message(msg.clone());
+        self.push_log(msg);
+        Ok(())
+    }
+
+    pub fn complete_grant_temp_hp(&mut self, index: usize, amount: i32) -> Result<(), String> {
+        if index >= self.encounter.combatants.len() {
+            return Err("Invalid combatant index".to_string());
+        }
+        if amount < 0 {
+            return Err("Temp HP must be non-negative".to_string());
+        }
+        let combatant = &mut self.encounter.combatants[index];
+        let name = combatant.name.clone();
+        combatant.grant_temp_hp(amount);
+        self.input_mode = InputMode::Normal;
+        let msg = format!("{} gains {} temp HP", name, amount);
+        self.set_message(msg.clone());
+        self.push_log(msg);
         Ok(())
     }
 
@@ -367,6 +408,16 @@ impl App {
             name,
             duration
         ));
+        self.push_log(format!(
+            "{} gains {} for {}",
+            name,
+            condition.as_str(),
+            if duration >= 0 {
+                format!("{} rounds", duration)
+            } else {
+                "indefinite".to_string()
+            }
+        ));
         Ok(())
     }
 
@@ -380,6 +431,7 @@ impl App {
 
         self.input_mode = InputMode::Normal;
         self.set_message(format!("Removed combatant: {}", name));
+        self.push_log(format!("Removed combatant: {}", name));
         Ok(())
     }
 
@@ -405,32 +457,44 @@ impl App {
 
         let message = match outcome {
             DeathSaveOutcome::Revived => {
-                format!("{} rolled a 20 and regains consciousness at 1 HP!", name)
+                let msg = format!("{} rolled a 20 and regains consciousness at 1 HP!", name);
+                self.push_log(msg.clone());
+                msg
             }
-            DeathSaveOutcome::Stabilized => format!(
-                "{} succeeds the death save and is now stable (S{}/F{})",
-                name,
-                combatant
-                    .death_saves
-                    .as_ref()
-                    .map(|d| d.successes)
-                    .unwrap_or(3),
-                combatant
-                    .death_saves
-                    .as_ref()
-                    .map(|d| d.failures)
-                    .unwrap_or(0)
-            ),
-            DeathSaveOutcome::Died => format!("{} failed too many death saves and has died.", name),
+            DeathSaveOutcome::Stabilized => {
+                let msg = format!(
+                    "{} succeeds the death save and is now stable (S{}/F{})",
+                    name,
+                    combatant
+                        .death_saves
+                        .as_ref()
+                        .map(|d| d.successes)
+                        .unwrap_or(3),
+                    combatant
+                        .death_saves
+                        .as_ref()
+                        .map(|d| d.failures)
+                        .unwrap_or(0)
+                );
+                self.push_log(msg.clone());
+                msg
+            }
+            DeathSaveOutcome::Died => {
+                let msg = format!("{} failed too many death saves and has died.", name);
+                self.push_log(msg.clone());
+                msg
+            }
             DeathSaveOutcome::Ongoing => {
-                if let Some(ds) = &combatant.death_saves {
+                let msg = if let Some(ds) = &combatant.death_saves {
                     format!(
                         "{} death save result recorded (S{}/F{})",
                         name, ds.successes, ds.failures
                     )
                 } else {
                     format!("{} death save recorded.", name)
-                }
+                };
+                self.push_log(msg.clone());
+                msg
             }
         };
 
@@ -602,6 +666,15 @@ impl App {
         }
         self.input_mode = InputMode::Normal;
         Ok(())
+    }
+
+    fn push_log(&mut self, message: String) {
+        let entry = LogEntry::new(self.encounter.round_number, message);
+        self.log.push(entry);
+        if self.log.len() > 200 {
+            let overflow = self.log.len() - 200;
+            self.log.drain(0..overflow);
+        }
     }
 }
 

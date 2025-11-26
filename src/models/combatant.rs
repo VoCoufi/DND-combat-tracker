@@ -7,6 +7,8 @@ pub struct Combatant {
     pub initiative: i32,
     pub hp_current: i32,
     pub hp_max: i32,
+    #[serde(default)]
+    pub temp_hp: i32,
     pub armor_class: i32,
     pub is_player: bool,
     pub status_effects: Vec<StatusEffect>,
@@ -27,6 +29,7 @@ impl Combatant {
             initiative,
             hp_current: hp_max,
             hp_max,
+            temp_hp: 0,
             armor_class,
             is_player,
             status_effects: Vec::new(),
@@ -36,7 +39,15 @@ impl Combatant {
     }
 
     pub fn take_damage(&mut self, damage: i32) {
-        self.hp_current = (self.hp_current - damage).max(0);
+        let mut remaining = damage;
+        if self.temp_hp > 0 {
+            let absorbed = self.temp_hp.min(remaining);
+            self.temp_hp -= absorbed;
+            remaining -= absorbed;
+        }
+        if remaining > 0 {
+            self.hp_current = (self.hp_current - remaining).max(0);
+        }
     }
 
     pub fn heal(&mut self, amount: i32) {
@@ -143,5 +154,11 @@ impl Combatant {
 
     pub fn set_concentration(&mut self, info: ConcentrationInfo) {
         self.concentration = Some(info);
+    }
+
+    pub fn grant_temp_hp(&mut self, amount: i32) {
+        if amount > self.temp_hp {
+            self.temp_hp = amount;
+        }
     }
 }

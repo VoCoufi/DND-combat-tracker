@@ -289,7 +289,7 @@ Quickly assess combatant health status at a glance without reading numbers.
 Quality-of-life improvements and expanded functionality.
 
 ### 9. Built-in Dice Roller
-**Status**: ⚪ Planned
+**Status**: 🔴 Blocked
 **Difficulty**: Medium
 **Estimated Effort**: 2-3 days
 
@@ -320,7 +320,7 @@ While the current design assumes physical dice, a built-in roller can speed up g
 ---
 
 ### 10. Combat Log/History
-**Status**: ⚪ Planned
+**Status**: 🟢 Completed
 **Difficulty**: Medium
 **Estimated Effort**: 2 days
 

@@ -63,6 +63,14 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
                 app.input_mode = InputMode::Normal;
             }
         }),
+        InputMode::GrantingTempHp(_) => handle_selection_mode(app, key, |app, idx, input| {
+            if let Ok(amount) = input.parse::<i32>() {
+                let _ = app.complete_grant_temp_hp(idx, amount);
+            } else {
+                app.set_message("Invalid temp HP value!".to_string());
+                app.input_mode = InputMode::Normal;
+            }
+        }),
         InputMode::SelectingStatusToClear(state) => handle_status_clear_selection(app, key, state),
         InputMode::SelectingTemplate(state) => handle_template_selection_mode(app, key, state),
         InputMode::SavingTemplate(_) => handle_selection_mode(app, key, |app, idx, _| {
@@ -177,7 +185,9 @@ where
         }
         InputMode::ClearingStatus(state) => (state.selected_index, state.input.clone(), true),
         InputMode::SavingTemplate(state) => (state.selected_index, state.input.clone(), true),
+        InputMode::GrantingTempHp(state) => (state.selected_index, state.input.clone(), false),
         InputMode::SelectingStatusToClear(_) => return,
+        InputMode::ActionMenu(_) | InputMode::CombatantMenu(_) => return,
         _ => return,
     };
 
@@ -240,6 +250,7 @@ fn update_selection_state(app: &mut App, index: usize, input: String) {
         }
         InputMode::SelectingTemplate(_) => InputMode::SelectingTemplate(new_state),
         InputMode::SavingTemplate(_) => InputMode::SavingTemplate(new_state),
+        InputMode::GrantingTempHp(_) => InputMode::GrantingTempHp(new_state),
         InputMode::Removing(_) => InputMode::Removing(new_state),
         _ => app.input_mode.clone(),
     };
@@ -465,6 +476,7 @@ enum ActionMenuItem {
     DeathSave,
     Concentration,
     ClearMenu,
+    TempHp,
 }
 
 fn action_menu_items() -> Vec<(ActionMenuItem, &'static str)> {
@@ -475,6 +487,7 @@ fn action_menu_items() -> Vec<(ActionMenuItem, &'static str)> {
         (ActionMenuItem::DeathSave, "Roll Death Save"),
         (ActionMenuItem::Concentration, "Set Concentration"),
         (ActionMenuItem::ClearMenu, "Clear Concentration/Status"),
+        (ActionMenuItem::TempHp, "Grant Temp HP"),
     ]
 }
 
@@ -507,6 +520,7 @@ fn handle_action_menu_mode(app: &mut App, key: KeyEvent, selected_index: usize) 
                     ActionMenuItem::DeathSave => app.start_rolling_death_save(),
                     ActionMenuItem::Concentration => app.start_concentration_target(),
                     ActionMenuItem::ClearMenu => app.start_clear_choice(),
+                    ActionMenuItem::TempHp => app.start_granting_temp_hp(),
                 }
             }
         }
