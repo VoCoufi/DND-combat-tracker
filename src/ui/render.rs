@@ -233,7 +233,7 @@ fn render_log(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(paragraph, area);
 }
 
-fn render_quick_reference(f: &mut Frame, selected_index: usize, app: &App) {
+fn render_quick_reference(f: &mut Frame, selected_index: usize, _app: &App) {
     let area = centered_rect(70, 80, f.area());
 
     let mut lines = vec![Line::from(Span::styled(

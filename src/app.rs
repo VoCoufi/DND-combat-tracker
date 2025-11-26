@@ -529,6 +529,10 @@ impl App {
             "{} starts concentrating on {}.",
             name, state.spell_name
         ));
+        self.push_log(format!(
+            "{} starts concentrating on {}.",
+            name, state.spell_name
+        ));
         Ok(())
     }
 
@@ -704,4 +708,58 @@ fn save_templates(templates: &[CombatantTemplate]) -> Result<(), String> {
     let path = templates_path();
     let json = serde_json::to_string_pretty(templates).map_err(|e| e.to_string())?;
     fs::write(path, json).map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn add_basic_combatant(app: &mut App, name: &str) {
+        let state = AddCombatantState {
+            step: 4,
+            name: name.to_string(),
+            initiative: "10".to_string(),
+            hp: "20".to_string(),
+            ac: "15".to_string(),
+            is_player: "n".to_string(),
+        };
+        app.complete_add_combatant(state).unwrap();
+    }
+
+    #[test]
+    fn granting_temp_hp_updates_combatant_and_logs() {
+        let mut app = App::new();
+        add_basic_combatant(&mut app, "Orc");
+        app.complete_grant_temp_hp(0, 7).unwrap();
+        assert_eq!(app.encounter.combatants[0].temp_hp, 7);
+        assert!(app.message.as_ref().unwrap().contains("gains 7 temp HP"));
+        assert!(app.log.last().unwrap().message.contains("gains 7 temp HP"));
+    }
+
+    #[test]
+    fn log_is_capped_at_200_entries() {
+        let mut app = App::new();
+        for i in 0..205 {
+            app.push_log(format!("entry {}", i));
+        }
+        assert_eq!(app.log.len(), 200);
+        assert_eq!(app.log.first().unwrap().message, "entry 5");
+    }
+
+    #[test]
+    fn damage_triggers_concentration_check() {
+        let mut app = App::new();
+        add_basic_combatant(&mut app, "Mage");
+        app.encounter.combatants[0]
+            .set_concentration(ConcentrationInfo::new("Haste".to_string(), 3));
+        app.complete_deal_damage(0, 12).unwrap();
+        match &app.input_mode {
+            InputMode::ConcentrationCheck(state) => {
+                assert_eq!(state.dc, 10); // max(10, damage/2)
+                assert!(app.message.as_ref().unwrap().contains("Roll CON save"));
+            }
+            _ => panic!("Expected ConcentrationCheck mode"),
+        }
+        assert!(app.encounter.combatants[0].concentration.is_some());
+    }
 }
