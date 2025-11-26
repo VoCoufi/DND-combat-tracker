@@ -4,16 +4,14 @@ A terminal-based combat encounter tracker for Dungeons & Dragons 5th Edition, bu
 
 ## Features
 
-- **Initiative Tracking**: Automatically sorts and manages turn order
-- **Combatant Management**: Add and remove players and monsters during combat
-- **HP Tracking**: Deal damage and heal combatants with real-time HP display
-- **Status Effects**: Track D&D 5e conditions (Stunned, Poisoned, Prone, etc.) with automatic duration countdown
-- **Interactive TUI**: Beautiful terminal UI with color coding
-  - Green for player characters
-  - Red for enemies
-  - Yellow for status effects
-  - HP-based color coding (green/yellow/red based on health)
-- **Round Tracking**: Automatically increments rounds and advances turns
+- **Initiative & Rounds**: Automatically sorts by initiative and advances rounds/turns
+- **Combatant Management**: Add/remove combatants, with optional templates for quick reuse
+- **HP + Temp HP**: Damage/heal flows plus temp HP that is consumed before regular HP
+- **Statuses & Conditions**: Full condition picker with durations (0 = indefinite) and per-condition clearing
+- **Death Saves & Concentration**: Tracks death saves and concentration checks after damage
+- **Action & Combatant Menus**: `m` for action menu (damage/heal/status/etc.), `b` for combatant menu (add/remove/templates/save)
+- **Combat Log**: Right-side log of recent actions
+- **Interactive TUI**: Color-coded HP bars, condition/status badges, and concentration/status displays
 
 ## Installation
 
@@ -44,13 +42,27 @@ cargo run --release
 
 | Key | Action |
 |-----|--------|
-| `n` | Next turn (advances to next combatant) |
-| `a` | Add a new combatant |
-| `d` | Deal damage to a combatant |
-| `h` | Heal a combatant |
-| `s` | Add a status effect |
-| `r` | Remove a combatant |
-| `q` | Quit the application |
+| `n` | Next turn |
+| `m` | Action menu (damage, heal, status, death save, concentration, temp HP, clear) |
+| `b` | Combatant menu (add, remove, add from template, save as template) |
+| `q` | Quit |
+
+#### Other Quick Keys
+
+You can still use direct shortcuts if you prefer:
+
+| Key | Action |
+|-----|--------|
+| `d` | Deal damage |
+| `h` | Heal |
+| `s` | Add status |
+| `v` | Roll death save |
+| `c` | Set concentration |
+| `x` | Clear concentration/status |
+| `t` | Add from template |
+| `p` | Save template |
+| `a` | Add combatant |
+| `r` | Remove combatant |
 
 #### Modal Modes
 
@@ -58,76 +70,25 @@ cargo run --release
 |-----|--------|
 | `Esc` | Cancel current operation |
 | `Enter` | Confirm input / Proceed to next step |
-| `↑/↓` | Navigate combatant selection |
+| `↑/↓` | Navigate selections |
 | `Backspace` | Delete last character in input |
 
-### Workflow
+### Workflow Highlights
 
-#### 1. Adding Combatants
-
-1. Press `a` to start adding a combatant
-2. Enter the following information when prompted:
-   - **Name**: Combatant's name (e.g., "Goblin", "Thorin")
-   - **Initiative**: Initiative roll result (e.g., 15)
-   - **Max HP**: Maximum hit points (e.g., 25)
-   - **AC**: Armor class (e.g., 14)
-   - **Is Player?**: Enter `y` for player characters, `n` for NPCs/monsters
-3. Press `Enter` after each field
-4. The combatant will be automatically added and sorted by initiative
-
-#### 2. Managing Combat
-
-- Press `n` to advance to the next turn
-  - Status effects automatically decrement at the end of each turn
-  - Round counter increments when returning to the first combatant
-
-#### 3. Dealing Damage
-
-1. Press `d` to deal damage
-2. Use `↑/↓` to select the target
-3. Type the damage amount
-4. Press `Enter` to confirm
-
-#### 4. Healing
-
-1. Press `h` to heal
-2. Use `↑/↓` to select the target
-3. Type the heal amount
-4. Press `Enter` to confirm
-
-#### 5. Adding Status Effects
-
-1. Press `s` to add a status effect
-2. Use `↑/↓` to select the combatant
-3. Press `Enter` to proceed
-4. Select the condition type (currently simplified - press `Esc` to cancel)
-
-*Note: Status effect selection is simplified in this version. Future updates will include full condition selection.*
-
-#### 6. Removing Combatants
-
-1. Press `r` to remove a combatant
-2. Use `↑/↓` to select the combatant to remove
-3. Press `Enter` to confirm removal
+- **Turn Advance**: `n` advances turns; log records actions; statuses tick each turn.
+- **Damage/Heal**: `d` / `h` (or via Action Menu `m`). Temp HP is consumed before regular HP.
+- **Temp HP**: Grant via Action Menu (`m` -> Grant Temp HP).
+- **Status Effects**: `s` to add; duration `0` = indefinite. Clear via `x` (Clear Menu) and choose the specific status if multiple.
+- **Death Saves**: `v` to record rolls for downed PCs; tracks successes/failures and handles crit 1/20.
+- **Concentration**: `c` to set; app prompts for CON save on damage and clears on failure/downed.
+- **Templates**: Add via Combatant Menu (`b` -> Add from Template) with name filter; save a combatant as a template via `p` or Combatant Menu (`b` -> Save as Template). Templates live in `templates.json` (git-ignored).
+- **Log**: Right-side panel shows recent actions; retains up to 200 entries.
 
 ## Supported D&D 5e Conditions
 
-The tracker supports all standard D&D 5e conditions:
+All standard conditions are available from the condition picker:
 
-- Blinded
-- Charmed
-- Deafened
-- Frightened
-- Grappled
-- Incapacitated
-- Invisible
-- Paralyzed
-- Petrified
-- Poisoned
-- Prone
-- Restrained
-- Stunned
-- Unconscious
+Blinded, Charmed, Deafened, Frightened, Grappled, Incapacitated, Invisible, Paralyzed, Petrified, Poisoned, Prone, Restrained, Stunned, Unconscious
 
 ## Example Combat Session
 
@@ -164,12 +125,8 @@ The tracker supports all standard D&D 5e conditions:
 
 ## Future Enhancements
 
-- [ ] Full status effect selection modal
 - [ ] Save/load combat encounters
 - [ ] Dice roller integration
-- [ ] Death saves tracking for player characters
-- [ ] Concentration tracking
-- [ ] Combat log/history
 - [ ] Monster stat blocks
 - [ ] Multiple encounter management
 
