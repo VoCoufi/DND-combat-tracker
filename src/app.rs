@@ -547,16 +547,18 @@ impl App {
             return Err("Invalid template selection".to_string());
         }
         let tpl = self.templates[template_index].clone();
-        let combatant = Combatant::new(
-            tpl.name.clone(),
-            tpl.initiative,
-            tpl.hp_max,
-            tpl.armor_class,
-            tpl.is_player,
-        );
-        self.encounter.add_combatant(combatant);
-        self.input_mode = InputMode::Normal;
-        self.set_message(format!("Added combatant from template: {}", tpl.name));
+        let mut state = AddCombatantState::default();
+        state.name = tpl.name.clone();
+        state.hp = tpl.hp_max.to_string();
+        state.ac = tpl.armor_class.to_string();
+        state.is_player = if tpl.is_player {
+            "y".to_string()
+        } else {
+            "n".to_string()
+        };
+        state.step = 1; // next prompt will be initiative
+        self.input_mode = InputMode::AddingCombatant(state);
+        self.set_message(format!("Set initiative for template: {}", tpl.name));
         Ok(())
     }
 
@@ -565,13 +567,8 @@ impl App {
             return Err("Invalid combatant index".to_string());
         }
         let c = &self.encounter.combatants[combatant_index];
-        let tpl = CombatantTemplate::from_stats(
-            c.name.clone(),
-            c.initiative,
-            c.hp_max,
-            c.armor_class,
-            c.is_player,
-        );
+        let tpl =
+            CombatantTemplate::from_stats(c.name.clone(), c.hp_max, c.armor_class, c.is_player);
 
         if let Some(existing) = self
             .templates

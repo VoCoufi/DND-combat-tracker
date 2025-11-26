@@ -1,0 +1,9 @@
+[
+  {
+    "name": "Test",
+    "hp_max": 50,
+    "armor_class": 1,
+    "initiative": 4,
+    "is_player": false
+  }
+]

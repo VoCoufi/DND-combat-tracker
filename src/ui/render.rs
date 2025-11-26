@@ -680,12 +680,11 @@ fn render_template_selection_modal(f: &mut Frame, state: &SelectionState, app: &
         let prefix = if selected { "> " } else { "  " };
         lines.push(Line::from(Span::styled(
             format!(
-                "{}{} (HP: {}, AC: {}, Init: {}, {})",
+                "{}{} (HP: {}, AC: {}, {})",
                 prefix,
                 t.name,
                 t.hp_max,
                 t.armor_class,
-                t.initiative,
                 if t.is_player { "PC" } else { "NPC" }
             ),
             style,
