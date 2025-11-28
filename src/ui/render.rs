@@ -10,7 +10,7 @@ use crate::app::{
     AddCombatantState, AddConcentrationState, App, ClearAction, ConcentrationCheckState,
     ConditionSelectionState, InputMode, SelectionState, StatusSelectionState,
 };
-use crate::models::{Combatant, ConditionType};
+use crate::models::{Combatant, ConditionType, StatusEffect};
 
 pub fn render(f: &mut Frame, app: &App) {
     let chunks = Layout::default()
@@ -105,6 +105,30 @@ fn render_header(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(block, area);
 }
 
+/// Creates formatted lines showing mechanical effects for active conditions
+fn format_condition_effects(status_effects: &[StatusEffect]) -> Vec<Line<'static>> {
+    if status_effects.is_empty() {
+        return vec![];
+    }
+
+    let effect_style = Style::default()
+        .fg(Color::Gray)
+        .add_modifier(Modifier::ITALIC);
+
+    status_effects
+        .iter()
+        .map(|effect| {
+            let effect_text = format!("    ⚬ {}: {}",
+                effect.condition.as_str(),
+                effect.condition.mechanical_effects()
+            );
+            Line::from(vec![
+                Span::styled(effect_text, effect_style)
+            ])
+        })
+        .collect()
+}
+
 fn render_combatants(f: &mut Frame, area: Rect, app: &App) {
     let items: Vec<ListItem> = app
         .encounter
@@ -136,7 +160,7 @@ fn render_combatants(f: &mut Frame, area: Rect, app: &App) {
             let hp_style = Style::default().fg(hp_color);
             let hp_bar = hp_bar(c);
 
-            let line = Line::from(vec![
+            let main_line = Line::from(vec![
                 Span::raw(arrow),
                 Span::raw(format!("[{:2}] ", c.initiative)),
                 Span::styled(
@@ -154,7 +178,12 @@ fn render_combatants(f: &mut Frame, area: Rect, app: &App) {
                 Span::styled(status_str, Style::default().fg(Color::Yellow)),
             ]);
 
-            ListItem::new(line)
+            // Build multi-line item with condition effects
+            let mut lines = vec![main_line];
+            let effect_lines = format_condition_effects(&c.status_effects);
+            lines.extend(effect_lines);
+
+            ListItem::new(lines)
         })
         .collect();
 
@@ -951,4 +980,54 @@ fn render_template_selection_modal(f: &mut Frame, state: &SelectionState, app: &
 
     f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::status::StatusEffect;
+
+    #[test]
+    fn format_condition_effects_empty_returns_empty() {
+        let effects: Vec<StatusEffect> = vec![];
+        let result = format_condition_effects(&effects);
+        assert_eq!(result.len(), 0);
+    }
+
+    #[test]
+    fn format_condition_effects_single_condition() {
+        let effects = vec![StatusEffect::new(ConditionType::Blinded, 2, None)];
+        let result = format_condition_effects(&effects);
+
+        assert_eq!(result.len(), 1);
+        // The line should contain the condition name and description
+        // We can't easily inspect the Line contents, but we can verify count
+    }
+
+    #[test]
+    fn format_condition_effects_multiple_conditions() {
+        let effects = vec![
+            StatusEffect::new(ConditionType::Blinded, 2, None),
+            StatusEffect::new(ConditionType::Poisoned, 3, None),
+            StatusEffect::new(ConditionType::Prone, 0, None),
+        ];
+        let result = format_condition_effects(&effects);
+
+        // Should have one line per condition
+        assert_eq!(result.len(), 3);
+    }
+
+    #[test]
+    fn all_conditions_have_descriptions() {
+        // Verify that all 14 condition types have descriptions
+        // This ensures the format_condition_effects function will work for all
+        let all_conditions = ConditionType::all();
+
+        assert_eq!(all_conditions.len(), 14);
+
+        for condition in all_conditions {
+            let desc = condition.description();
+            assert!(!desc.is_empty(), "Condition {:?} has no description", condition);
+        }
+    }
 }

@@ -6,3 +6,6 @@ templates.json
 
 # Build artifacts
 /target/
+
+# Work logs
+/notes/

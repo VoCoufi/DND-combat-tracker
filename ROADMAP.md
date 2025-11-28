@@ -566,7 +566,7 @@ Track special abilities, roleplay notes, or combat tactics for specific combatan
 ---
 
 ### 18. Condition Auto-Effects
-**Status**: ⚪ Planned
+**Status**: 🟢 Completed
 **Difficulty**: Very Hard
 **Estimated Effort**: 5-7 days
 

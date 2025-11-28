@@ -97,6 +97,46 @@ impl ConditionType {
             }
         }
     }
+
+    /// Returns concise mechanical effects summary for combat reference
+    pub fn mechanical_effects(&self) -> &'static str {
+        match self {
+            ConditionType::Blinded => {
+                "Attacks: disadv; Attacks vs: adv; Fails sight checks"
+            }
+            ConditionType::Charmed => {
+                "Can't attack charmer; Charmer: adv on social"
+            }
+            ConditionType::Deafened => "Fails hearing checks",
+            ConditionType::Frightened => {
+                "Attacks/checks: disadv; Can't move closer"
+            }
+            ConditionType::Grappled => "Speed: 0",
+            ConditionType::Incapacitated => "No actions/reactions",
+            ConditionType::Invisible => {
+                "Attacks: adv; Attacks vs: disadv"
+            }
+            ConditionType::Paralyzed => {
+                "Attacks vs: adv + crit (5ft); Fails STR/DEX saves"
+            }
+            ConditionType::Petrified => {
+                "Attacks vs: adv; Resist all damage"
+            }
+            ConditionType::Poisoned => "Attacks/checks: disadv",
+            ConditionType::Prone => {
+                "Attacks vs: adv (melee 5ft), disadv (ranged); Attacks: disadv"
+            }
+            ConditionType::Restrained => {
+                "Speed: 0; Attacks vs: adv; Attacks: disadv; DEX saves: disadv"
+            }
+            ConditionType::Stunned => {
+                "Attacks vs: adv; Fails STR/DEX saves"
+            }
+            ConditionType::Unconscious => {
+                "Prone; Attacks vs: adv + crit (5ft); Fails STR/DEX saves"
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -149,5 +189,34 @@ mod tests {
     fn indefinite_status_not_expired() {
         let s = StatusEffect::new(ConditionType::Prone, 0, None);
         assert!(!s.is_expired());
+    }
+
+    #[test]
+    fn all_conditions_have_mechanical_effects() {
+        // Verify all 14 conditions have mechanical effects
+        let all_conditions = ConditionType::all();
+        assert_eq!(all_conditions.len(), 14);
+
+        for condition in all_conditions {
+            let effects = condition.mechanical_effects();
+            assert!(!effects.is_empty(), "Condition {:?} has no mechanical effects", condition);
+        }
+    }
+
+    #[test]
+    fn mechanical_effects_are_concise() {
+        // Verify mechanical effects are reasonably short (max 80 chars to prevent overflow)
+        let all_conditions = ConditionType::all();
+
+        for condition in all_conditions {
+            let effects = condition.mechanical_effects();
+            assert!(
+                effects.len() <= 80,
+                "Condition {:?} mechanical effects too long ({} chars): {}",
+                condition,
+                effects.len(),
+                effects
+            );
+        }
     }
 }
