@@ -124,12 +124,19 @@ pub struct App {
 
 impl App {
     pub fn new() -> Self {
-        let templates = load_templates();
+        let (templates, message) = match load_templates() {
+            Ok(t) => (t, None),
+            Err(e) => {
+                log::error!("Template load error: {}", e);
+                (Vec::new(), Some(format!("Warning: {}", e)))
+            }
+        };
+
         Self {
             encounter: CombatEncounter::new(),
             input_mode: InputMode::Normal,
             should_quit: false,
-            message: None,
+            message,
             templates,
             log: Vec::new(),
         }
@@ -693,21 +700,34 @@ fn templates_path() -> &'static str {
     "templates.json"
 }
 
-fn load_templates() -> Vec<CombatantTemplate> {
+fn load_templates() -> Result<Vec<CombatantTemplate>, String> {
     let path = templates_path();
     if !Path::new(path).exists() {
-        return Vec::new();
+        return Ok(Vec::new());
     }
-    match fs::read_to_string(path) {
-        Ok(content) => serde_json::from_str(&content).unwrap_or_else(|_| Vec::new()),
-        Err(_) => Vec::new(),
-    }
+
+    let content = fs::read_to_string(path).map_err(|e| {
+        log::error!("Failed to read templates from {}: {}", path, e);
+        format!("Could not read templates file: {}", e)
+    })?;
+
+    serde_json::from_str(&content).map_err(|e| {
+        log::error!("Failed to parse templates JSON from {}: {}", path, e);
+        format!("Templates file is corrupted: {}", e)
+    })
 }
 
 fn save_templates(templates: &[CombatantTemplate]) -> Result<(), String> {
     let path = templates_path();
-    let json = serde_json::to_string_pretty(templates).map_err(|e| e.to_string())?;
-    fs::write(path, json).map_err(|e| e.to_string())
+    let json = serde_json::to_string_pretty(templates).map_err(|e| {
+        log::error!("Failed to serialize templates to JSON: {}", e);
+        e.to_string()
+    })?;
+
+    fs::write(path, json).map_err(|e| {
+        log::error!("Failed to write templates to {}: {}", path, e);
+        e.to_string()
+    })
 }
 
 #[cfg(test)]

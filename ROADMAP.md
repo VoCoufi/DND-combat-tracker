@@ -864,7 +864,7 @@ Load user preferences from config file (~/.config/dnd-combat-tracker/config.toml
 ---
 
 ### 29. Better Error Handling
-**Status**: ⚪ Planned
+**Status**: 🟢 Completed
 **Difficulty**: Medium
 **Estimated Effort**: 2-3 days
 

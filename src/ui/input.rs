@@ -10,7 +10,9 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
         InputMode::AddingCombatant(_) => handle_add_combatant_mode(app, key),
         InputMode::DealingDamage(_) => handle_selection_mode(app, key, |app, idx, input| {
             if let Ok(damage) = input.parse::<i32>() {
-                let _ = app.complete_deal_damage(idx, damage);
+                if let Err(e) = app.complete_deal_damage(idx, damage) {
+                    app.set_message(e);
+                }
             } else {
                 app.set_message("Invalid damage value!".to_string());
                 app.input_mode = InputMode::Normal;
@@ -18,7 +20,9 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
         }),
         InputMode::Healing(_) => handle_selection_mode(app, key, |app, idx, input| {
             if let Ok(amount) = input.parse::<i32>() {
-                let _ = app.complete_heal(idx, amount);
+                if let Err(e) = app.complete_heal(idx, amount) {
+                    app.set_message(e);
+                }
             } else {
                 app.set_message("Invalid heal value!".to_string());
                 app.input_mode = InputMode::Normal;
@@ -28,7 +32,9 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
         InputMode::SelectingCondition(state) => handle_condition_selection_mode(app, key, state),
         InputMode::RollingDeathSave(_) => handle_selection_mode(app, key, |app, idx, input| {
             if let Ok(roll) = input.parse::<i32>() {
-                let _ = app.complete_death_save_roll(idx, roll);
+                if let Err(e) = app.complete_death_save_roll(idx, roll) {
+                    app.set_message(e);
+                }
             } else {
                 app.set_message("Invalid roll value!".to_string());
                 app.input_mode = InputMode::Normal;
@@ -43,15 +49,21 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
         InputMode::ApplyingConcentration(state) => handle_add_concentration_mode(app, key, state),
         InputMode::ConcentrationCheck(state) => handle_concentration_check_mode(app, key, state),
         InputMode::ClearingConcentration(_) => handle_selection_mode(app, key, |app, idx, _| {
-            let _ = app.complete_clear_concentration(idx);
+            if let Err(e) = app.complete_clear_concentration(idx) {
+                app.set_message(e);
+            }
         }),
         InputMode::ClearActionSelection(choice) => handle_clear_choice_mode(app, key, choice),
         InputMode::ClearingStatus(_) => handle_selection_mode(app, key, |app, idx, _| {
             if let Some(combatant) = app.encounter.combatants.get(idx) {
                 if combatant.status_effects.is_empty() {
-                    let _ = app.complete_clear_status_effect(idx, None);
+                    if let Err(e) = app.complete_clear_status_effect(idx, None) {
+                        app.set_message(e);
+                    }
                 } else if combatant.status_effects.len() == 1 {
-                    let _ = app.complete_clear_status_effect(idx, Some(0));
+                    if let Err(e) = app.complete_clear_status_effect(idx, Some(0)) {
+                        app.set_message(e);
+                    }
                 } else {
                     app.input_mode = InputMode::SelectingStatusToClear(StatusSelectionState {
                         combatant_index: idx,
@@ -65,7 +77,9 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
         }),
         InputMode::GrantingTempHp(_) => handle_selection_mode(app, key, |app, idx, input| {
             if let Ok(amount) = input.parse::<i32>() {
-                let _ = app.complete_grant_temp_hp(idx, amount);
+                if let Err(e) = app.complete_grant_temp_hp(idx, amount) {
+                    app.set_message(e);
+                }
             } else {
                 app.set_message("Invalid temp HP value!".to_string());
                 app.input_mode = InputMode::Normal;
@@ -74,7 +88,9 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) {
         InputMode::SelectingStatusToClear(state) => handle_status_clear_selection(app, key, state),
         InputMode::SelectingTemplate(state) => handle_template_selection_mode(app, key, state),
         InputMode::SavingTemplate(_) => handle_selection_mode(app, key, |app, idx, _| {
-            let _ = app.save_template_from_combatant(idx);
+            if let Err(e) = app.save_template_from_combatant(idx) {
+                app.set_message(e);
+            }
         }),
         InputMode::ActionMenu(selected) => handle_action_menu_mode(app, key, selected),
         InputMode::CombatantMenu(selected) => handle_combatant_menu_mode(app, key, selected),
@@ -343,7 +359,9 @@ fn handle_condition_selection_mode(app: &mut App, key: KeyEvent, state: Conditio
             };
 
             let condition = crate::models::ConditionType::all()[condition_idx];
-            let _ = app.complete_add_status(combatant_index, condition, duration);
+            if let Err(e) = app.complete_add_status(combatant_index, condition, duration) {
+                app.set_message(e);
+            }
         }
         _ => {}
     }
@@ -408,7 +426,9 @@ fn handle_concentration_check_mode(app: &mut App, key: KeyEvent, state: Concentr
         }
         KeyCode::Enter => {
             if let Ok(total) = input.parse::<i32>() {
-                let _ = app.complete_concentration_check(state.clone(), total);
+                if let Err(e) = app.complete_concentration_check(state.clone(), total) {
+                    app.set_message(e);
+                }
             } else {
                 app.set_message("Invalid roll total".to_string());
                 app.input_mode = InputMode::Normal;
@@ -466,7 +486,9 @@ fn handle_removing_mode(app: &mut App, key: KeyEvent) {
                 update_selection_state(app, new_index, String::new());
             }
             KeyCode::Enter => {
-                let _ = app.complete_remove(selected_index);
+                if let Err(e) = app.complete_remove(selected_index) {
+                    app.set_message(e);
+                }
             }
             _ => {}
         }
@@ -639,7 +661,9 @@ fn handle_status_clear_selection(app: &mut App, key: KeyEvent, state: StatusSele
             });
         }
         KeyCode::Enter => {
-            let _ = app.complete_clear_status_effect(combatant_index, Some(selected));
+            if let Err(e) = app.complete_clear_status_effect(combatant_index, Some(selected)) {
+                app.set_message(e);
+            }
         }
         _ => {}
     }

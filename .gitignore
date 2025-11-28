@@ -3,6 +3,7 @@
 
 # Generated data
 templates.json
+error_log.txt
 
 # Build artifacts
 /target/

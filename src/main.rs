@@ -3,10 +3,12 @@ mod combat;
 mod models;
 mod ui;
 
+use std::fs::OpenOptions;
 use std::io;
 use std::time::Duration;
 
 use anyhow::Result;
+use log::error;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event},
     execute,
@@ -21,6 +23,9 @@ use app::App;
 use ui::{handle_key_event, render};
 
 fn main() -> Result<()> {
+    // Setup error logging to file
+    setup_logging()?;
+
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -44,8 +49,23 @@ fn main() -> Result<()> {
     terminal.show_cursor()?;
 
     if let Err(err) = res {
+        error!("Application error: {:?}", err);
         eprintln!("Error: {:?}", err);
     }
+
+    Ok(())
+}
+
+fn setup_logging() -> Result<()> {
+    let log_file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("error_log.txt")?;
+
+    env_logger::Builder::from_default_env()
+        .target(env_logger::Target::Pipe(Box::new(log_file)))
+        .filter_level(log::LevelFilter::Error)
+        .init();
 
     Ok(())
 }
