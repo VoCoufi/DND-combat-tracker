@@ -8,7 +8,8 @@ use ratatui::{
 
 use crate::app::{
     AddCombatantState, AddConcentrationState, App, ClearAction, ConcentrationCheckState,
-    ConditionSelectionState, InputMode, SelectionState, StatusSelectionState,
+    ConditionSelectionState, InputMode, LoadLibraryState, SaveEncounterState, SaveLibraryState,
+    SelectionState, StatusSelectionState,
 };
 use crate::models::{Combatant, ConditionType, StatusEffect};
 
@@ -89,6 +90,15 @@ pub fn render(f: &mut Frame, app: &App) {
             "Select combatant to remove:",
             app,
         ),
+        InputMode::SavingEncounter(state) => render_save_encounter_modal(f, state),
+        InputMode::LoadingEncounter(state) => render_load_encounter_modal(f, state, app),
+        InputMode::SavingLibrary(state) => render_save_library_modal(f, state),
+        InputMode::LoadingLibrary(state) => render_loading_library_modal(f, state, app),
+        InputMode::SettingLibraryInitiatives(state) => {
+            render_library_initiative_modal(f, state, app)
+        }
+        InputMode::ConfirmingLibraryOverwrite(_) => render_confirm_overwrite_modal(f),
+        InputMode::ConfirmingLibraryLoad(_) => render_confirm_load_modal(f),
         InputMode::Normal => {}
     }
 }
@@ -200,7 +210,7 @@ fn render_combatants(f: &mut Frame, area: Rect, app: &App) {
 fn render_commands(f: &mut Frame, area: Rect, app: &App) {
     let commands = match app.input_mode {
         InputMode::Normal => {
-            "[n] Next Turn  [m] Action Menu  [b] Combatant Menu  [?] Reference  [q] Quit"
+            "[n] Next  [m] Action  [b] Combatant  [Ctrl+S] Save  [Ctrl+O] Load  [?] Ref  [q] Quit"
         }
         _ => "[Esc] Cancel",
     };
@@ -855,12 +865,14 @@ fn render_action_menu(f: &mut Frame, selected: usize) {
 }
 
 fn render_combatant_menu(f: &mut Frame, selected: usize) {
-    let area = centered_rect(50, 40, f.area());
+    let area = centered_rect(50, 50, f.area());
     let items = [
         "Add Combatant",
         "Remove Combatant",
         "Add from Template",
         "Save as Template",
+        "Load Encounter Library",
+        "Save to Encounter Library",
     ];
 
     let mut lines = vec![Line::from(Span::styled(
@@ -975,6 +987,413 @@ fn render_template_selection_modal(f: &mut Frame, state: &SelectionState, app: &
         .title(" Templates ")
         .borders(Borders::ALL)
         .style(Style::default().fg(Color::Yellow));
+
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
+
+    f.render_widget(Clear, area);
+    f.render_widget(paragraph, area);
+}
+
+fn render_save_encounter_modal(f: &mut Frame, state: &SaveEncounterState) {
+    let area = centered_rect(60, 30, f.area());
+
+    let lines = vec![
+        Line::from(Span::styled(
+            "Save Encounter",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(""),
+        Line::from("Enter filename (alphanumeric, underscore, hyphen only):"),
+        Line::from(""),
+        Line::from(vec![
+            Span::raw("> "),
+            Span::styled(state.input.clone(), Style::default().fg(Color::White)),
+            Span::styled(
+                "_",
+                Style::default()
+                    .fg(Color::White)
+                    .add_modifier(Modifier::SLOW_BLINK),
+            ),
+        ]),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Press Enter to save, Esc to cancel",
+            Style::default().fg(Color::DarkGray),
+        )),
+    ];
+
+    let block = Block::default()
+        .title(" Save Encounter ")
+        .borders(Borders::ALL)
+        .style(Style::default().fg(Color::Yellow));
+
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
+
+    f.render_widget(Clear, area);
+    f.render_widget(paragraph, area);
+}
+
+fn render_load_encounter_modal(f: &mut Frame, state: &SelectionState, app: &App) {
+    let area = centered_rect(60, 50, f.area());
+
+    let saved_encounters = app.list_saved_encounters();
+    let filtered: Vec<&String> = saved_encounters
+        .iter()
+        .filter(|name| name.to_lowercase().contains(&state.input.to_lowercase()))
+        .collect();
+
+    let selected_index = state.selected_index.min(filtered.len().saturating_sub(1));
+    let max_visible = 10;
+    let start = if selected_index + 1 > max_visible {
+        selected_index + 1 - max_visible
+    } else {
+        0
+    };
+    let end = (start + max_visible).min(filtered.len());
+
+    let mut lines = vec![Line::from(Span::styled(
+        "Load Encounter",
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    ))];
+    lines.push(Line::from(""));
+
+    if filtered.is_empty() {
+        lines.push(Line::from(Span::styled(
+            "No saved encounters found",
+            Style::default().fg(Color::Red),
+        )));
+    } else {
+        if start > 0 {
+            lines.push(Line::from(Span::styled(
+                "… more above …",
+                Style::default().fg(Color::DarkGray),
+            )));
+        }
+
+        for (visible_idx, name) in filtered.iter().enumerate().skip(start).take(max_visible) {
+            let selected = visible_idx == selected_index;
+            let style = if selected {
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(Color::White)
+            };
+            let prefix = if selected { "> " } else { "  " };
+            lines.push(Line::from(Span::styled(
+                format!("{}{}. {}", prefix, visible_idx + 1, name),
+                style,
+            )));
+        }
+
+        if end < filtered.len() {
+            lines.push(Line::from(Span::styled(
+                "… more below …",
+                Style::default().fg(Color::DarkGray),
+            )));
+        }
+    }
+
+    lines.push(Line::from(""));
+    lines.push(Line::from(vec![
+        Span::raw("Filter: "),
+        Span::styled(
+            state.input.clone(),
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        ),
+    ]));
+
+    let block = Block::default()
+        .title(" Load Encounter ")
+        .borders(Borders::ALL)
+        .style(Style::default().fg(Color::Yellow));
+
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
+
+    f.render_widget(Clear, area);
+    f.render_widget(paragraph, area);
+}
+
+// Library render functions
+
+fn render_save_library_modal(f: &mut Frame, state: &SaveLibraryState) {
+    let area = centered_rect(60, 50, f.area());
+
+    let prompts = [
+        "Enter encounter name:",
+        "Enter description:",
+        "Enter difficulty (optional, e.g., Easy, Medium, Hard):",
+    ];
+
+    let values = [&state.name, &state.description, &state.difficulty];
+
+    let mut lines = vec![Line::from(Span::styled(
+        "Save to Encounter Library",
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    ))];
+    lines.push(Line::from(""));
+
+    for (i, prompt) in prompts.iter().enumerate() {
+        if i < state.step {
+            lines.push(Line::from(vec![
+                Span::raw(*prompt),
+                Span::raw(" "),
+                Span::styled(values[i].clone(), Style::default().fg(Color::Green)),
+            ]));
+        } else if i == state.step {
+            lines.push(Line::from(vec![Span::styled(
+                *prompt,
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]));
+            lines.push(Line::from(vec![
+                Span::raw("> "),
+                Span::styled(values[i].clone(), Style::default().fg(Color::White)),
+                Span::styled(
+                    "_",
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::SLOW_BLINK),
+                ),
+            ]));
+        } else {
+            lines.push(Line::from(Span::styled(
+                *prompt,
+                Style::default().fg(Color::DarkGray),
+            )));
+        }
+    }
+
+    let block = Block::default()
+        .title(" Save to Library ")
+        .borders(Borders::ALL)
+        .style(Style::default().fg(Color::Yellow));
+
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
+
+    f.render_widget(Clear, area);
+    f.render_widget(paragraph, area);
+}
+
+fn render_loading_library_modal(f: &mut Frame, state: &SelectionState, app: &App) {
+    let area = centered_rect(70, 60, f.area());
+
+    let library_templates = app.list_library_templates();
+    let filtered: Vec<&String> = library_templates
+        .iter()
+        .filter(|name| name.to_lowercase().contains(&state.input.to_lowercase()))
+        .collect();
+
+    let selected_index = state.selected_index.min(filtered.len().saturating_sub(1));
+    let max_visible = 10;
+    let start = if selected_index + 1 > max_visible {
+        selected_index + 1 - max_visible
+    } else {
+        0
+    };
+    let end = (start + max_visible).min(filtered.len());
+
+    let mut lines = vec![Line::from(Span::styled(
+        "Load from Encounter Library",
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    ))];
+    lines.push(Line::from(""));
+
+    if filtered.is_empty() {
+        lines.push(Line::from(Span::styled(
+            "No library templates found",
+            Style::default().fg(Color::Red),
+        )));
+    } else {
+        if start > 0 {
+            lines.push(Line::from(Span::styled(
+                "… more above …",
+                Style::default().fg(Color::DarkGray),
+            )));
+        }
+
+        for (visible_idx, name) in filtered.iter().enumerate().skip(start).take(max_visible) {
+            let selected = visible_idx == selected_index;
+            let style = if selected {
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(Color::White)
+            };
+            let prefix = if selected { "> " } else { "  " };
+            lines.push(Line::from(Span::styled(
+                format!("{}{}. {}", prefix, visible_idx + 1, name),
+                style,
+            )));
+        }
+
+        if end < filtered.len() {
+            lines.push(Line::from(Span::styled(
+                "… more below …",
+                Style::default().fg(Color::DarkGray),
+            )));
+        }
+    }
+
+    lines.push(Line::from(""));
+    lines.push(Line::from(vec![
+        Span::raw("Filter: "),
+        Span::styled(
+            state.input.clone(),
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        ),
+    ]));
+
+    let block = Block::default()
+        .title(" Load from Library ")
+        .borders(Borders::ALL)
+        .style(Style::default().fg(Color::Yellow));
+
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
+
+    f.render_widget(Clear, area);
+    f.render_widget(paragraph, area);
+}
+
+fn render_library_initiative_modal(f: &mut Frame, state: &LoadLibraryState, _app: &App) {
+    let area = centered_rect(60, 40, f.area());
+
+    let current_combatant = &state.combatants_with_init[state.current_index].0;
+    let current_input = &state.combatants_with_init[state.current_index].1;
+
+    let progress = format!(
+        "Setting initiative ({}/{})",
+        state.current_index + 1,
+        state.combatants_with_init.len()
+    );
+
+    let lines = vec![
+        Line::from(Span::styled(
+            format!("Loading: {}", state.template.name),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(Span::styled(
+            progress,
+            Style::default().fg(Color::DarkGray),
+        )),
+        Line::from(""),
+        Line::from(vec![
+            Span::raw("Combatant: "),
+            Span::styled(
+                &current_combatant.name,
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        Line::from(format!(
+            "HP: {}, AC: {}",
+            current_combatant.hp_max, current_combatant.armor_class
+        )),
+        Line::from(""),
+        Line::from("Enter initiative:"),
+        Line::from(""),
+        Line::from(vec![
+            Span::raw("> "),
+            Span::styled(current_input.clone(), Style::default().fg(Color::White)),
+            Span::styled(
+                "_",
+                Style::default()
+                    .fg(Color::White)
+                    .add_modifier(Modifier::SLOW_BLINK),
+            ),
+        ]),
+    ];
+
+    let block = Block::default()
+        .title(" Set Initiatives ")
+        .borders(Borders::ALL)
+        .style(Style::default().fg(Color::Yellow));
+
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
+
+    f.render_widget(Clear, area);
+    f.render_widget(paragraph, area);
+}
+
+fn render_confirm_overwrite_modal(f: &mut Frame) {
+    let area = centered_rect(50, 30, f.area());
+
+    let lines = vec![
+        Line::from(Span::styled(
+            "Confirm Overwrite",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(""),
+        Line::from("A library entry with this name already exists."),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Overwrite? (y/n)",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )),
+    ];
+
+    let block = Block::default()
+        .title(" Confirm ")
+        .borders(Borders::ALL)
+        .style(Style::default().fg(Color::Yellow));
+
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
+
+    f.render_widget(Clear, area);
+    f.render_widget(paragraph, area);
+}
+
+fn render_confirm_load_modal(f: &mut Frame) {
+    let area = centered_rect(50, 30, f.area());
+
+    let lines = vec![
+        Line::from(Span::styled(
+            "Confirm Load",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(""),
+        Line::from(Span::styled(
+            "This will clear the current encounter!",
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        )),
+        Line::from(""),
+        Line::from("All combatants, HP, statuses, and log will be lost."),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Continue? (y/n)",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )),
+    ];
+
+    let block = Block::default()
+        .title(" Warning ")
+        .borders(Borders::ALL)
+        .style(Style::default().fg(Color::Red));
 
     let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
 
