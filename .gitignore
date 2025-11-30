@@ -10,3 +10,7 @@ error_log.txt
 
 # Work logs
 /notes/
+
+# Save files
+/encounters/
+/library/

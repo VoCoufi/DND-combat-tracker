@@ -1,339 +1,19 @@
 use ratatui::{
     Frame,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap},
+    widgets::{Block, Borders, Clear, Paragraph, Wrap},
 };
 
 use crate::app::{
     AddCombatantState, AddConcentrationState, App, ClearAction, ConcentrationCheckState,
-    ConditionSelectionState, InputMode, LoadLibraryState, SaveEncounterState, SaveLibraryState,
+    ConditionSelectionState, LoadLibraryState, SaveEncounterState, SaveLibraryState,
     SelectionState, StatusSelectionState,
 };
-use crate::models::{Combatant, ConditionType, StatusEffect};
+use crate::models::ConditionType;
 
-pub fn render(f: &mut Frame, app: &App) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3), // Header
-            Constraint::Min(0),    // Main content
-            Constraint::Length(3), // Commands
-            Constraint::Length(2), // Message
-        ])
-        .split(f.area());
-
-    let content_chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Min(40), Constraint::Length(40)])
-        .split(chunks[1]);
-
-    // Render header
-    render_header(f, chunks[0], app);
-
-    // Render main content
-    render_combatants(f, content_chunks[0], app);
-    render_log(f, content_chunks[1], app);
-
-    // Render commands
-    render_commands(f, chunks[2], app);
-
-    // Render message
-    if let Some(ref msg) = app.message {
-        render_message(f, chunks[3], msg);
-    }
-
-    // Render modal if needed
-    match &app.input_mode {
-        InputMode::AddingCombatant(state) => render_add_combatant_modal(f, state),
-        InputMode::DealingDamage(state) => {
-            render_selection_modal(f, state, "Deal Damage", "Enter damage amount:", app)
-        }
-        InputMode::Healing(state) => {
-            render_selection_modal(f, state, "Heal", "Enter heal amount:", app)
-        }
-        InputMode::AddingStatus(state) => {
-            render_selection_modal(f, state, "Add Status Effect", "Select combatant:", app)
-        }
-        InputMode::SelectingCondition(state) => render_condition_selection(f, state, app),
-        InputMode::RollingDeathSave(state) => {
-            render_selection_modal(f, state, "Death Save", "Enter d20 roll:", app)
-        }
-        InputMode::ConcentrationTarget(state) => {
-            render_selection_modal(f, state, "Set Concentration", "Select combatant:", app)
-        }
-        InputMode::ApplyingConcentration(state) => render_add_concentration_modal(f, state, app),
-        InputMode::ConcentrationCheck(state) => render_concentration_check(f, state, app),
-        InputMode::ClearActionSelection(choice) => render_clear_choice_modal(f, choice),
-        InputMode::ClearingConcentration(state) => {
-            render_selection_modal(f, state, "Clear Concentration", "Select combatant:", app)
-        }
-        InputMode::ClearingStatus(state) => {
-            render_selection_modal(f, state, "Clear Status Effects", "Select combatant:", app)
-        }
-        InputMode::SelectingStatusToClear(state) => render_status_clear_modal(f, state, app),
-        InputMode::SelectingTemplate(state) => render_template_selection_modal(f, state, app),
-        InputMode::SavingTemplate(state) => {
-            render_selection_modal(f, state, "Save Template", "Select combatant to save:", app)
-        }
-        InputMode::GrantingTempHp(state) => {
-            render_selection_modal(f, state, "Grant Temp HP", "Enter temp HP amount:", app)
-        }
-        InputMode::ActionMenu(selected) => render_action_menu(f, *selected),
-        InputMode::CombatantMenu(selected) => render_combatant_menu(f, *selected),
-        InputMode::QuickReference(selected) => render_quick_reference(f, *selected, app),
-        InputMode::Removing(state) => render_selection_modal(
-            f,
-            state,
-            "Remove Combatant",
-            "Select combatant to remove:",
-            app,
-        ),
-        InputMode::SavingEncounter(state) => render_save_encounter_modal(f, state),
-        InputMode::LoadingEncounter(state) => render_load_encounter_modal(f, state, app),
-        InputMode::SavingLibrary(state) => render_save_library_modal(f, state),
-        InputMode::LoadingLibrary(state) => render_loading_library_modal(f, state, app),
-        InputMode::SettingLibraryInitiatives(state) => {
-            render_library_initiative_modal(f, state, app)
-        }
-        InputMode::ConfirmingLibraryOverwrite(_) => render_confirm_overwrite_modal(f),
-        InputMode::ConfirmingLibraryLoad(_) => render_confirm_load_modal(f),
-        InputMode::Normal => {}
-    }
-}
-
-fn render_header(f: &mut Frame, area: Rect, app: &App) {
-    let title = format!(
-        " D&D 5e Combat Tracker | Round: {} ",
-        app.encounter.round_number
-    );
-    let block = Block::default()
-        .title(title)
-        .borders(Borders::ALL)
-        .style(Style::default().fg(Color::Cyan));
-    f.render_widget(block, area);
-}
-
-/// Creates formatted lines showing mechanical effects for active conditions
-fn format_condition_effects(status_effects: &[StatusEffect]) -> Vec<Line<'static>> {
-    if status_effects.is_empty() {
-        return vec![];
-    }
-
-    let effect_style = Style::default()
-        .fg(Color::Gray)
-        .add_modifier(Modifier::ITALIC);
-
-    status_effects
-        .iter()
-        .map(|effect| {
-            let effect_text = format!("    ⚬ {}: {}",
-                effect.condition.as_str(),
-                effect.condition.mechanical_effects()
-            );
-            Line::from(vec![
-                Span::styled(effect_text, effect_style)
-            ])
-        })
-        .collect()
-}
-
-fn render_combatants(f: &mut Frame, area: Rect, app: &App) {
-    let items: Vec<ListItem> = app
-        .encounter
-        .combatants
-        .iter()
-        .enumerate()
-        .map(|(i, c)| {
-            let is_current = i == app.encounter.current_turn_index;
-            let arrow = if is_current { "→ " } else { "  " };
-
-            let name_color = if c.is_player {
-                Color::Green
-            } else {
-                Color::Red
-            };
-
-            let status_str = if c.status_effects.is_empty() {
-                String::new()
-            } else {
-                let effects: Vec<String> = c
-                    .status_effects
-                    .iter()
-                    .map(|e| format!("{}({})", e.condition.as_str(), e.duration))
-                    .collect();
-                format!(" [{}]", effects.join(", "))
-            };
-
-            let hp_color = hp_color(c);
-            let hp_style = Style::default().fg(hp_color);
-            let hp_bar = hp_bar(c);
-
-            let main_line = Line::from(vec![
-                Span::raw(arrow),
-                Span::raw(format!("[{:2}] ", c.initiative)),
-                Span::styled(
-                    format!("{:<20}", c.name),
-                    Style::default().fg(name_color).add_modifier(Modifier::BOLD),
-                ),
-                Span::raw(" HP "),
-                Span::styled(hp_bar, hp_style),
-                Span::raw(" "),
-                Span::styled(format!("{}/{}", c.hp_current, c.hp_max), hp_style),
-                temp_hp_span(c),
-                death_save_span(c),
-                concentration_span(c),
-                Span::raw(format!("  AC: {}  ", c.armor_class)),
-                Span::styled(status_str, Style::default().fg(Color::Yellow)),
-            ]);
-
-            // Build multi-line item with condition effects
-            let mut lines = vec![main_line];
-            let effect_lines = format_condition_effects(&c.status_effects);
-            lines.extend(effect_lines);
-
-            ListItem::new(lines)
-        })
-        .collect();
-
-    let list = List::new(items).block(
-        Block::default()
-            .title(" Initiative Order ")
-            .borders(Borders::ALL)
-            .style(Style::default().fg(Color::White)),
-    );
-
-    f.render_widget(list, area);
-}
-
-fn render_commands(f: &mut Frame, area: Rect, app: &App) {
-    let commands = match app.input_mode {
-        InputMode::Normal => {
-            "[n] Next  [m] Action  [b] Combatant  [Ctrl+S] Save  [Ctrl+O] Load  [?] Ref  [q] Quit"
-        }
-        _ => "[Esc] Cancel",
-    };
-
-    let block = Block::default()
-        .title(" Commands ")
-        .borders(Borders::ALL)
-        .style(Style::default().fg(Color::White));
-
-    let paragraph = Paragraph::new(commands)
-        .block(block)
-        .alignment(Alignment::Center);
-
-    f.render_widget(paragraph, area);
-}
-
-fn render_message(f: &mut Frame, area: Rect, msg: &str) {
-    let paragraph = Paragraph::new(msg)
-        .style(Style::default().fg(Color::Yellow))
-        .alignment(Alignment::Center);
-
-    f.render_widget(paragraph, area);
-}
-
-fn render_log(f: &mut Frame, area: Rect, app: &App) {
-    let mut lines: Vec<Line> = app
-        .log
-        .iter()
-        .rev()
-        .take(5)
-        .rev()
-        .map(|entry| {
-            Line::from(vec![
-                Span::styled(
-                    format!("R{}: ", entry.round),
-                    Style::default()
-                        .fg(Color::Cyan)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::raw(&entry.message),
-            ])
-        })
-        .collect();
-
-    if lines.is_empty() {
-        lines.push(Line::from(Span::styled(
-            "Log empty",
-            Style::default().fg(Color::DarkGray),
-        )));
-    }
-
-    let block = Block::default()
-        .title(" Log ")
-        .borders(Borders::ALL)
-        .style(Style::default().fg(Color::White));
-
-    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
-
-    f.render_widget(paragraph, area);
-}
-
-fn render_quick_reference(f: &mut Frame, selected_index: usize, _app: &App) {
-    let area = centered_rect(70, 80, f.area());
-
-    let mut lines = vec![Line::from(Span::styled(
-        "Condition Reference (↑/↓, Esc to close)",
-        Style::default()
-            .fg(Color::Cyan)
-            .add_modifier(Modifier::BOLD),
-    ))];
-    lines.push(Line::from(""));
-
-    let conditions = ConditionType::all();
-    let max_visible = 8;
-    let start = if selected_index + 1 > max_visible {
-        selected_index + 1 - max_visible
-    } else {
-        0
-    };
-    let end = (start + max_visible).min(conditions.len());
-
-    if start > 0 {
-        lines.push(Line::from(Span::styled(
-            "… more above …",
-            Style::default().fg(Color::DarkGray),
-        )));
-    }
-
-    for (idx, condition) in conditions.iter().enumerate().skip(start).take(max_visible) {
-        let selected = idx == selected_index;
-        let title_style = if selected {
-            Style::default()
-                .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD)
-        } else {
-            Style::default().fg(Color::Yellow)
-        };
-        lines.push(Line::from(vec![
-            Span::styled(format!("{}: ", condition.as_str()), title_style),
-            Span::raw(condition.description()),
-        ]));
-        lines.push(Line::from(""));
-    }
-
-    if end < conditions.len() {
-        lines.push(Line::from(Span::styled(
-            "… more below …",
-            Style::default().fg(Color::DarkGray),
-        )));
-    }
-
-    let block = Block::default()
-        .title(" Quick Reference (?) ")
-        .borders(Borders::ALL)
-        .style(Style::default().fg(Color::White));
-
-    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
-
-    f.render_widget(Clear, area);
-    f.render_widget(paragraph, area);
-}
-
-fn render_add_combatant_modal(f: &mut Frame, state: &AddCombatantState) {
+pub fn render_add_combatant_modal(f: &mut Frame, state: &AddCombatantState) {
     let area = centered_rect(60, 40, f.area());
 
     let prompts = [
@@ -396,68 +76,7 @@ fn render_add_combatant_modal(f: &mut Frame, state: &AddCombatantState) {
     f.render_widget(paragraph, area);
 }
 
-fn render_status_clear_modal(f: &mut Frame, state: &StatusSelectionState, app: &App) {
-    let area = centered_rect(60, 50, f.area());
-    let combatant = app.encounter.combatants.get(state.combatant_index).cloned();
-
-    let name = combatant
-        .as_ref()
-        .map(|c| c.name.as_str())
-        .unwrap_or("Unknown");
-
-    let mut lines = vec![Line::from(Span::styled(
-        format!("Clear status from {}", name),
-        Style::default()
-            .fg(Color::Cyan)
-            .add_modifier(Modifier::BOLD),
-    ))];
-    lines.push(Line::from(""));
-
-    if let Some(c) = combatant {
-        for (i, effect) in c.status_effects.iter().enumerate() {
-            let selected = i == state.selected_status_index;
-            let style = if selected {
-                Style::default()
-                    .fg(Color::Yellow)
-                    .add_modifier(Modifier::BOLD)
-            } else {
-                Style::default().fg(Color::White)
-            };
-            let prefix = if selected { "> " } else { "  " };
-            let duration = if effect.duration >= 0 {
-                format!("{}r", effect.duration)
-            } else {
-                "∞".to_string()
-            };
-            lines.push(Line::from(Span::styled(
-                format!(
-                    "{}{} (duration: {})",
-                    prefix,
-                    effect.condition.as_str(),
-                    duration
-                ),
-                style,
-            )));
-        }
-    } else {
-        lines.push(Line::from(Span::styled(
-            "No combatant selected.",
-            Style::default().fg(Color::Red),
-        )));
-    }
-
-    let block = Block::default()
-        .title(" Clear Status ")
-        .borders(Borders::ALL)
-        .style(Style::default().fg(Color::Yellow));
-
-    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
-
-    f.render_widget(Clear, area);
-    f.render_widget(paragraph, area);
-}
-
-fn render_selection_modal(
+pub fn render_selection_modal(
     f: &mut Frame,
     state: &SelectionState,
     title: &str,
@@ -521,7 +140,7 @@ fn render_selection_modal(
     f.render_widget(paragraph, area);
 }
 
-fn render_condition_selection(f: &mut Frame, state: &ConditionSelectionState, app: &App) {
+pub fn render_condition_selection(f: &mut Frame, state: &ConditionSelectionState, app: &App) {
     let area = centered_rect(50, 60, f.area());
 
     let combatant_name = app
@@ -575,101 +194,68 @@ fn render_condition_selection(f: &mut Frame, state: &ConditionSelectionState, ap
     f.render_widget(paragraph, area);
 }
 
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage((100 - percent_y) / 2),
-            Constraint::Percentage(percent_y),
-            Constraint::Percentage((100 - percent_y) / 2),
-        ])
-        .split(r);
+pub fn render_status_clear_modal(f: &mut Frame, state: &StatusSelectionState, app: &App) {
+    let area = centered_rect(60, 50, f.area());
+    let combatant = app.encounter.combatants.get(state.combatant_index).cloned();
 
-    Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage((100 - percent_x) / 2),
-            Constraint::Percentage(percent_x),
-            Constraint::Percentage((100 - percent_x) / 2),
-        ])
-        .split(popup_layout[1])[1]
-}
+    let name = combatant
+        .as_ref()
+        .map(|c| c.name.as_str())
+        .unwrap_or("Unknown");
 
-fn hp_color(combatant: &Combatant) -> Color {
-    if combatant.is_dead() {
-        Color::DarkGray
-    } else if combatant.is_unconscious() {
-        Color::DarkGray
-    } else if combatant.hp_percentage() < 25.0 {
-        Color::Red
-    } else if combatant.hp_percentage() < 50.0 {
-        Color::Yellow
-    } else {
-        Color::Green
-    }
-}
+    let mut lines = vec![Line::from(Span::styled(
+        format!("Clear status from {}", name),
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    ))];
+    lines.push(Line::from(""));
 
-fn hp_bar(combatant: &Combatant) -> String {
-    let segments: usize = 12;
-    let percentage = combatant.hp_percentage().clamp(0.0, 100.0);
-    let filled = ((percentage / 100.0) * segments as f32)
-        .round()
-        .min(segments as f32) as usize;
-    let empty = segments.saturating_sub(filled);
-
-    format!("[{}{}]", "#".repeat(filled), ".".repeat(empty))
-}
-
-fn death_save_span(combatant: &Combatant) -> Span<'static> {
-    if combatant.is_dead() {
-        return Span::styled(
-            " [DEAD]",
-            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
-        );
-    }
-
-    if let Some(ds) = &combatant.death_saves {
-        let mut label = format!(" DS S{}/F{}", ds.successes, ds.failures);
-        if ds.is_stable {
-            label.push_str(" (stable)");
+    if let Some(c) = combatant {
+        for (i, effect) in c.status_effects.iter().enumerate() {
+            let selected = i == state.selected_status_index;
+            let style = if selected {
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(Color::White)
+            };
+            let prefix = if selected { "> " } else { "  " };
+            let duration = if effect.duration >= 0 {
+                format!("{}r", effect.duration)
+            } else {
+                "∞".to_string()
+            };
+            lines.push(Line::from(Span::styled(
+                format!(
+                    "{}{} (duration: {})",
+                    prefix,
+                    effect.condition.as_str(),
+                    duration
+                ),
+                style,
+            )));
         }
-        Span::styled(
-            label,
-            Style::default()
-                .fg(Color::Magenta)
-                .add_modifier(Modifier::BOLD),
-        )
     } else {
-        Span::raw("")
+        lines.push(Line::from(Span::styled(
+            "No combatant selected.",
+            Style::default().fg(Color::Red),
+        )));
     }
+
+    let block = Block::default()
+        .title(" Clear Status ")
+        .borders(Borders::ALL)
+        .style(Style::default().fg(Color::Yellow));
+
+    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
+
+    f.render_widget(Clear, area);
+    f.render_widget(paragraph, area);
 }
 
-fn temp_hp_span(combatant: &Combatant) -> Span<'static> {
-    if combatant.temp_hp > 0 {
-        Span::styled(
-            format!(" (+{} temp)", combatant.temp_hp),
-            Style::default().fg(Color::Cyan),
-        )
-    } else {
-        Span::raw("")
-    }
-}
-
-fn concentration_span(combatant: &Combatant) -> Span<'static> {
-    if let Some(info) = &combatant.concentration {
-        let text = format!(" [Conc: {}]", info.spell_name);
-        Span::styled(
-            text,
-            Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::ITALIC),
-        )
-    } else {
-        Span::raw("")
-    }
-}
-
-fn render_add_concentration_modal(f: &mut Frame, state: &AddConcentrationState, app: &App) {
+pub fn render_add_concentration_modal(f: &mut Frame, state: &AddConcentrationState, app: &App) {
     let area = centered_rect(60, 50, f.area());
     let combatant_name = app
         .encounter
@@ -732,7 +318,7 @@ fn render_add_concentration_modal(f: &mut Frame, state: &AddConcentrationState, 
     f.render_widget(paragraph, area);
 }
 
-fn render_concentration_check(f: &mut Frame, state: &ConcentrationCheckState, app: &App) {
+pub fn render_concentration_check(f: &mut Frame, state: &ConcentrationCheckState, app: &App) {
     let area = centered_rect(60, 40, f.area());
     let combatant_name = app
         .encounter
@@ -776,7 +362,7 @@ fn render_concentration_check(f: &mut Frame, state: &ConcentrationCheckState, ap
     f.render_widget(paragraph, area);
 }
 
-fn render_clear_choice_modal(f: &mut Frame, choice: &ClearAction) {
+pub fn render_clear_choice_modal(f: &mut Frame, choice: &ClearAction) {
     let area = centered_rect(40, 40, f.area());
     let options = [
         (ClearAction::Concentration, "Clear Concentration"),
@@ -818,98 +404,7 @@ fn render_clear_choice_modal(f: &mut Frame, choice: &ClearAction) {
     f.render_widget(paragraph, area);
 }
 
-fn render_action_menu(f: &mut Frame, selected: usize) {
-    let area = centered_rect(50, 40, f.area());
-    let items = [
-        "Deal Damage",
-        "Heal",
-        "Add Status Effect",
-        "Roll Death Save",
-        "Set Concentration",
-        "Clear Concentration/Status",
-        "Grant Temp HP",
-    ];
-
-    let mut lines = vec![Line::from(Span::styled(
-        "Action Menu",
-        Style::default()
-            .fg(Color::Cyan)
-            .add_modifier(Modifier::BOLD),
-    ))];
-    lines.push(Line::from(""));
-
-    for (i, label) in items.iter().enumerate() {
-        let selected_style = if i == selected {
-            Style::default()
-                .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD)
-        } else {
-            Style::default().fg(Color::White)
-        };
-        let prefix = if i == selected { "> " } else { "  " };
-        lines.push(Line::from(Span::styled(
-            format!("{}{}", prefix, label),
-            selected_style,
-        )));
-    }
-
-    let block = Block::default()
-        .title(" Actions ")
-        .borders(Borders::ALL)
-        .style(Style::default().fg(Color::Yellow));
-
-    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
-
-    f.render_widget(Clear, area);
-    f.render_widget(paragraph, area);
-}
-
-fn render_combatant_menu(f: &mut Frame, selected: usize) {
-    let area = centered_rect(50, 50, f.area());
-    let items = [
-        "Add Combatant",
-        "Remove Combatant",
-        "Add from Template",
-        "Save as Template",
-        "Load Encounter Library",
-        "Save to Encounter Library",
-    ];
-
-    let mut lines = vec![Line::from(Span::styled(
-        "Combatant Menu",
-        Style::default()
-            .fg(Color::Cyan)
-            .add_modifier(Modifier::BOLD),
-    ))];
-    lines.push(Line::from(""));
-
-    for (i, label) in items.iter().enumerate() {
-        let selected_style = if i == selected {
-            Style::default()
-                .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD)
-        } else {
-            Style::default().fg(Color::White)
-        };
-        let prefix = if i == selected { "> " } else { "  " };
-        lines.push(Line::from(Span::styled(
-            format!("{}{}", prefix, label),
-            selected_style,
-        )));
-    }
-
-    let block = Block::default()
-        .title(" Combatants ")
-        .borders(Borders::ALL)
-        .style(Style::default().fg(Color::Yellow));
-
-    let paragraph = Paragraph::new(lines).block(block).wrap(Wrap { trim: true });
-
-    f.render_widget(Clear, area);
-    f.render_widget(paragraph, area);
-}
-
-fn render_template_selection_modal(f: &mut Frame, state: &SelectionState, app: &App) {
+pub fn render_template_selection_modal(f: &mut Frame, state: &SelectionState, app: &App) {
     let area = centered_rect(60, 50, f.area());
 
     let filtered: Vec<&crate::models::CombatantTemplate> = app
@@ -994,7 +489,7 @@ fn render_template_selection_modal(f: &mut Frame, state: &SelectionState, app: &
     f.render_widget(paragraph, area);
 }
 
-fn render_save_encounter_modal(f: &mut Frame, state: &SaveEncounterState) {
+pub fn render_save_encounter_modal(f: &mut Frame, state: &SaveEncounterState) {
     let area = centered_rect(60, 30, f.area());
 
     let lines = vec![
@@ -1035,7 +530,7 @@ fn render_save_encounter_modal(f: &mut Frame, state: &SaveEncounterState) {
     f.render_widget(paragraph, area);
 }
 
-fn render_load_encounter_modal(f: &mut Frame, state: &SelectionState, app: &App) {
+pub fn render_load_encounter_modal(f: &mut Frame, state: &SelectionState, app: &App) {
     let area = centered_rect(60, 50, f.area());
 
     let saved_encounters = app.list_saved_encounters();
@@ -1120,9 +615,7 @@ fn render_load_encounter_modal(f: &mut Frame, state: &SelectionState, app: &App)
     f.render_widget(paragraph, area);
 }
 
-// Library render functions
-
-fn render_save_library_modal(f: &mut Frame, state: &SaveLibraryState) {
+pub fn render_save_library_modal(f: &mut Frame, state: &SaveLibraryState) {
     let area = centered_rect(60, 50, f.area());
 
     let prompts = [
@@ -1184,7 +677,7 @@ fn render_save_library_modal(f: &mut Frame, state: &SaveLibraryState) {
     f.render_widget(paragraph, area);
 }
 
-fn render_loading_library_modal(f: &mut Frame, state: &SelectionState, app: &App) {
+pub fn render_loading_library_modal(f: &mut Frame, state: &SelectionState, app: &App) {
     let area = centered_rect(70, 60, f.area());
 
     let library_templates = app.list_library_templates();
@@ -1269,7 +762,7 @@ fn render_loading_library_modal(f: &mut Frame, state: &SelectionState, app: &App
     f.render_widget(paragraph, area);
 }
 
-fn render_library_initiative_modal(f: &mut Frame, state: &LoadLibraryState, _app: &App) {
+pub fn render_library_initiative_modal(f: &mut Frame, state: &LoadLibraryState, _app: &App) {
     let area = centered_rect(60, 40, f.area());
 
     let current_combatant = &state.combatants_with_init[state.current_index].0;
@@ -1332,7 +825,7 @@ fn render_library_initiative_modal(f: &mut Frame, state: &LoadLibraryState, _app
     f.render_widget(paragraph, area);
 }
 
-fn render_confirm_overwrite_modal(f: &mut Frame) {
+pub fn render_confirm_overwrite_modal(f: &mut Frame) {
     let area = centered_rect(50, 30, f.area());
 
     let lines = vec![
@@ -1364,7 +857,7 @@ fn render_confirm_overwrite_modal(f: &mut Frame) {
     f.render_widget(paragraph, area);
 }
 
-fn render_confirm_load_modal(f: &mut Frame) {
+pub fn render_confirm_load_modal(f: &mut Frame) {
     let area = centered_rect(50, 30, f.area());
 
     let lines = vec![
@@ -1401,52 +894,22 @@ fn render_confirm_load_modal(f: &mut Frame) {
     f.render_widget(paragraph, area);
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::models::status::StatusEffect;
+pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Percentage(percent_y),
+            Constraint::Percentage((100 - percent_y) / 2),
+        ])
+        .split(r);
 
-    #[test]
-    fn format_condition_effects_empty_returns_empty() {
-        let effects: Vec<StatusEffect> = vec![];
-        let result = format_condition_effects(&effects);
-        assert_eq!(result.len(), 0);
-    }
-
-    #[test]
-    fn format_condition_effects_single_condition() {
-        let effects = vec![StatusEffect::new(ConditionType::Blinded, 2, None)];
-        let result = format_condition_effects(&effects);
-
-        assert_eq!(result.len(), 1);
-        // The line should contain the condition name and description
-        // We can't easily inspect the Line contents, but we can verify count
-    }
-
-    #[test]
-    fn format_condition_effects_multiple_conditions() {
-        let effects = vec![
-            StatusEffect::new(ConditionType::Blinded, 2, None),
-            StatusEffect::new(ConditionType::Poisoned, 3, None),
-            StatusEffect::new(ConditionType::Prone, 0, None),
-        ];
-        let result = format_condition_effects(&effects);
-
-        // Should have one line per condition
-        assert_eq!(result.len(), 3);
-    }
-
-    #[test]
-    fn all_conditions_have_descriptions() {
-        // Verify that all 14 condition types have descriptions
-        // This ensures the format_condition_effects function will work for all
-        let all_conditions = ConditionType::all();
-
-        assert_eq!(all_conditions.len(), 14);
-
-        for condition in all_conditions {
-            let desc = condition.description();
-            assert!(!desc.is_empty(), "Condition {:?} has no description", condition);
-        }
-    }
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage(percent_x),
+            Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(popup_layout[1])[1]
 }
