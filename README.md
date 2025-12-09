@@ -7,45 +7,6 @@
 
 A feature-rich, terminal-based combat encounter tracker for Dungeons & Dragons 5th Edition, built with Rust. Manage initiative, HP, conditions, death saves, concentration, and more with an intuitive keyboard-driven interface powered by `ratatui`.
 
-## Features
-
-### Combat Management
-- **Initiative & Turn Order**: Automatic sorting by initiative with round tracking
-- **Turn Advancement**: Progress through turns with automatic status effect duration tracking
-- **Combat Log**: Persistent right-side panel tracking all combat events (200 entry history)
-
-### Combatant Management
-- **Add/Remove Combatants**: Full workflow for adding creatures with name, initiative, HP, AC, and player/NPC designation
-- **HP & Temporary HP**: Complete D&D 5e temp HP mechanics (consumed first, higher replaces lower, doesn't heal regular HP)
-- **Damage & Healing**: Deal damage with automatic concentration checks; heal with simple prompts
-- **Color-Coded HP Bars**: Visual feedback (Green >50%, Yellow 25-50%, Red <25%, Gray 0%)
-
-### D&D 5e Mechanics
-- **Death Saves**: Full implementation with nat 1 (2 failures), nat 20 (revive at 1 HP), and 3 success/failure tracking
-- **Concentration**: Automatic concentration checks on damage with proper DC calculation: `max(10, damage/2)`
-- **Status Effects & Conditions**: All 14 standard D&D 5e conditions with duration tracking
-  - Blinded, Charmed, Deafened, Frightened, Grappled, Incapacitated, Invisible, Paralyzed, Petrified, Poisoned, Prone, Restrained, Stunned, Unconscious
-  - Duration 0 = indefinite, >0 = timed (auto-decrements on turn end)
-- **Condition Quick Reference**: Press `?` for scrollable modal with full mechanical descriptions
-
-### Persistence & Templates
-- **Save/Load Encounters**: Save complete combat state to file (`Ctrl+S`) and resume later (`Ctrl+O`)
-  - Preserves HP, conditions, turn position, round number, combat log, and all state
-- **Encounter Library**: Build reusable encounter templates with name, description, and difficulty rating
-  - Save entire encounters as pristine templates (no runtime state)
-  - Load with fresh HP and prompt for new initiative rolls
-  - Perfect for DMs prepping recurring encounters
-- **Combatant Templates**: Save individual combatant stat blocks for quick reuse
-  - Stored in `templates.json` (git-ignored)
-  - Filter by name when loading
-
-### User Interface
-- **Modal State Machine**: Menu-driven interface with 28 specialized input modes
-- **Action Menu**: Quick access to all combat actions via `m` key
-- **Combatant Menu**: Centralized combatant management via `b` key
-- **Stateless Rendering**: Responsive TUI with clear visual hierarchy and color coding
-- **Keyboard-First Design**: All features accessible via intuitive keyboard shortcuts
-
 ## Installation
 
 ### Option 1: Download Prebuilt Binary (Recommended)
@@ -134,6 +95,45 @@ Here's a typical combat session workflow:
 7. **Save encounter**: Press `Ctrl+S` to save current state
 
 8. **Quit**: Press `q` when combat ends
+
+## Features
+
+### Combat Management
+- **Initiative & Turn Order**: Automatic sorting by initiative with round tracking
+- **Turn Advancement**: Progress through turns with automatic status effect duration tracking
+- **Combat Log**: Persistent right-side panel tracking all combat events (200 entry history)
+
+### Combatant Management
+- **Add/Remove Combatants**: Full workflow for adding creatures with name, initiative, HP, AC, and player/NPC designation
+- **HP & Temporary HP**: Complete D&D 5e temp HP mechanics (consumed first, higher replaces lower, doesn't heal regular HP)
+- **Damage & Healing**: Deal damage with automatic concentration checks; heal with simple prompts
+- **Color-Coded HP Bars**: Visual feedback (Green >50%, Yellow 25-50%, Red <25%, Gray 0%)
+
+### D&D 5e Mechanics
+- **Death Saves**: Full implementation with nat 1 (2 failures), nat 20 (revive at 1 HP), and 3 success/failure tracking
+- **Concentration**: Automatic concentration checks on damage with proper DC calculation: `max(10, damage/2)`
+- **Status Effects & Conditions**: All 14 standard D&D 5e conditions with duration tracking
+  - Blinded, Charmed, Deafened, Frightened, Grappled, Incapacitated, Invisible, Paralyzed, Petrified, Poisoned, Prone, Restrained, Stunned, Unconscious
+  - Duration 0 = indefinite, >0 = timed (auto-decrements on turn end)
+- **Condition Quick Reference**: Press `?` for scrollable modal with full mechanical descriptions
+
+### Persistence & Templates
+- **Save/Load Encounters**: Save complete combat state to file (`Ctrl+S`) and resume later (`Ctrl+O`)
+  - Preserves HP, conditions, turn position, round number, combat log, and all state
+- **Encounter Library**: Build reusable encounter templates with name, description, and difficulty rating
+  - Save entire encounters as pristine templates (no runtime state)
+  - Load with fresh HP and prompt for new initiative rolls
+  - Perfect for DMs prepping recurring encounters
+- **Combatant Templates**: Save individual combatant stat blocks for quick reuse
+  - Stored in `templates.json` (git-ignored)
+  - Filter by name when loading
+
+### User Interface
+- **Modal State Machine**: Menu-driven interface with 28 specialized input modes
+- **Action Menu**: Quick access to all combat actions via `m` key
+- **Combatant Menu**: Centralized combatant management via `b` key
+- **Stateless Rendering**: Responsive TUI with clear visual hierarchy and color coding
+- **Keyboard-First Design**: All features accessible via intuitive keyboard shortcuts
 
 ## Usage Guide
 
