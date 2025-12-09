@@ -616,6 +616,14 @@ Built with:
 
 Special thanks to the D&D 5e community and the Rust TUI ecosystem.
 
+## Legal Notice
+
+This application is an independent tool for tracking combat encounters using game mechanics and is not affiliated with, endorsed, sponsored, or specifically approved by Wizards of the Coast LLC.
+
+Dungeons & Dragons, D&D, and Wizards of the Coast are trademarks of Wizards of the Coast LLC in the U.S.A. and other countries. ©1993-2025 Wizards of the Coast LLC.
+
+This software uses game mechanics available under the Open Game License but does not reproduce copyrighted material. All monster names, spell names, and other content belong to their respective copyright holders.
+
 ---
 
 **Happy adventuring, and may your initiative rolls be high!**
