@@ -752,8 +752,7 @@ mod tests {
         let combatant = Combatant::new("Goblin".to_string(), 10, 20, 15, false);
         encounter.add_combatant(combatant);
 
-        let mut log = Vec::new();
-        log.push(LogEntry::new(1, "Test log entry".to_string()));
+        let log = vec![LogEntry::new(1, "Test log entry".to_string())];
 
         let saved = SavedEncounter {
             encounter,
