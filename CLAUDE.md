@@ -218,5 +218,3 @@ Tests are co-located with modules using `#[cfg(test)]`. Key test files:
 **Completed Features**: Status effect selection, death saves, concentration tracking, templates, HP visualization, combat log, temp HP, quick reference, unit testing
 
 **High-Priority Planned**: Save/load encounters (#4), bulk add combatants (#5), undo last action (#6)
-
-See `ROADMAP.md` for complete feature list and technical specifications.

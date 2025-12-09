@@ -179,7 +179,6 @@ mod tests {
 2. **Update documentation** if needed:
    - Update `README.md` for user-facing features
    - Update `CLAUDE.md` for architectural changes
-   - Update `ROADMAP.md` if implementing planned features
 
 3. **Commit your changes** with clear messages:
    ```bash
@@ -217,7 +216,7 @@ mod tests {
 
 Have an idea for a new feature?
 
-1. **Check the roadmap**: See [`ROADMAP.md`](./ROADMAP.md) and [`Claude_ROADMAP.md`](./Claude_ROADMAP.md) for planned features
+1. **Check existing plans**: See [GitHub Issues](https://github.com/VoCoufi/DND-combat-tracker/issues) for planned features
 2. **Search existing issues**: Your idea may already be discussed
 3. **Open a new issue** with the template:
 

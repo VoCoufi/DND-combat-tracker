@@ -550,10 +550,6 @@ See `CLAUDE.md` for detailed guidance on:
 - **All input handling**: `src/ui/input/entry.rs` (dispatcher), `src/ui/input/normal.rs` (normal mode)
 - **All rendering**: `src/ui/render.rs`
 
-## Roadmap
-
-For detailed feature planning and implementation priorities, see [Claude_ROADMAP.md](./Claude_ROADMAP.md).
-
 **Completed Features**:
 - ✅ Status effect selection and duration tracking
 - ✅ Death saves with critical success/failure

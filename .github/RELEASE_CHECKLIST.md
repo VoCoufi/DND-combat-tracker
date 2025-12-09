@@ -139,7 +139,6 @@ Choose platforms based on your target audience:
 
 ### Planning
 
-- [ ] Update ROADMAP.md if priorities changed
 - [ ] Create milestone for next release
 - [ ] Review and close completed issues
 - [ ] Plan next release features
