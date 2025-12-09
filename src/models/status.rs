@@ -101,37 +101,21 @@ impl ConditionType {
     /// Returns concise mechanical effects summary for combat reference
     pub fn mechanical_effects(&self) -> &'static str {
         match self {
-            ConditionType::Blinded => {
-                "Attacks: disadv; Attacks vs: adv; Fails sight checks"
-            }
-            ConditionType::Charmed => {
-                "Can't attack charmer; Charmer: adv on social"
-            }
+            ConditionType::Blinded => "Attacks: disadv; Attacks vs: adv; Fails sight checks",
+            ConditionType::Charmed => "Can't attack charmer; Charmer: adv on social",
             ConditionType::Deafened => "Fails hearing checks",
-            ConditionType::Frightened => {
-                "Attacks/checks: disadv; Can't move closer"
-            }
+            ConditionType::Frightened => "Attacks/checks: disadv; Can't move closer",
             ConditionType::Grappled => "Speed: 0",
             ConditionType::Incapacitated => "No actions/reactions",
-            ConditionType::Invisible => {
-                "Attacks: adv; Attacks vs: disadv"
-            }
-            ConditionType::Paralyzed => {
-                "Attacks vs: adv + crit (5ft); Fails STR/DEX saves"
-            }
-            ConditionType::Petrified => {
-                "Attacks vs: adv; Resist all damage"
-            }
+            ConditionType::Invisible => "Attacks: adv; Attacks vs: disadv",
+            ConditionType::Paralyzed => "Attacks vs: adv + crit (5ft); Fails STR/DEX saves",
+            ConditionType::Petrified => "Attacks vs: adv; Resist all damage",
             ConditionType::Poisoned => "Attacks/checks: disadv",
-            ConditionType::Prone => {
-                "Attacks vs: adv (melee 5ft), disadv (ranged); Attacks: disadv"
-            }
+            ConditionType::Prone => "Attacks vs: adv (melee 5ft), disadv (ranged); Attacks: disadv",
             ConditionType::Restrained => {
                 "Speed: 0; Attacks vs: adv; Attacks: disadv; DEX saves: disadv"
             }
-            ConditionType::Stunned => {
-                "Attacks vs: adv; Fails STR/DEX saves"
-            }
+            ConditionType::Stunned => "Attacks vs: adv; Fails STR/DEX saves",
             ConditionType::Unconscious => {
                 "Prone; Attacks vs: adv + crit (5ft); Fails STR/DEX saves"
             }
@@ -199,7 +183,11 @@ mod tests {
 
         for condition in all_conditions {
             let effects = condition.mechanical_effects();
-            assert!(!effects.is_empty(), "Condition {:?} has no mechanical effects", condition);
+            assert!(
+                !effects.is_empty(),
+                "Condition {:?} has no mechanical effects",
+                condition
+            );
         }
     }
 

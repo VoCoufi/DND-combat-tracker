@@ -38,7 +38,9 @@ pub(super) fn handle_load_encounter_mode(app: &mut App, key: KeyEvent, state: Se
 
     if filtered.is_empty() && input.is_empty() {
         // No saved encounters exist
-        app.set_message("No saved encounters found. Press Ctrl+S to save current encounter.".to_string());
+        app.set_message(
+            "No saved encounters found. Press Ctrl+S to save current encounter.".to_string(),
+        );
         app.input_mode = InputMode::Normal;
         return;
     }
@@ -129,9 +131,15 @@ pub(super) fn handle_save_library_mode(app: &mut App, key: KeyEvent, state: Save
         }
         KeyCode::Backspace => {
             match new_state.step {
-                0 => { new_state.name.pop(); }
-                1 => { new_state.description.pop(); }
-                2 => { new_state.difficulty.pop(); }
+                0 => {
+                    new_state.name.pop();
+                }
+                1 => {
+                    new_state.description.pop();
+                }
+                2 => {
+                    new_state.difficulty.pop();
+                }
                 _ => {}
             };
             app.input_mode = InputMode::SavingLibrary(new_state);

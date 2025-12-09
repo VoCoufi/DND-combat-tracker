@@ -1,5 +1,9 @@
 # IDE
 .idea/
+.vscode/
+*.swp
+*.swo
+*~
 
 # Generated data
 templates.json
@@ -7,6 +11,11 @@ error_log.txt
 
 # Build artifacts
 /target/
+Cargo.lock
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Work logs
 /notes/

@@ -61,6 +61,7 @@ impl CombatEncounter {
         }
     }
 
+    #[allow(dead_code)]
     pub fn previous_turn(&mut self) {
         if self.combatants.is_empty() {
             return;
@@ -75,10 +76,12 @@ impl CombatEncounter {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_current_combatant(&self) -> Option<&Combatant> {
         self.combatants.get(self.current_turn_index)
     }
 
+    #[allow(dead_code)]
     pub fn get_current_combatant_mut(&mut self) -> Option<&mut Combatant> {
         self.combatants.get_mut(self.current_turn_index)
     }

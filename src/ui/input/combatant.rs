@@ -1,3 +1,5 @@
+#![allow(clippy::collapsible_else_if)]
+
 use crate::app::{App, InputMode, SelectionState};
 use crossterm::event::{KeyCode, KeyEvent};
 

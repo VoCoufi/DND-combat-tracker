@@ -2,7 +2,7 @@ use crate::app::{App, InputMode};
 use crossterm::event::{KeyCode, KeyEvent};
 
 #[derive(Clone, Copy)]
-enum ActionMenuItem {
+pub(super) enum ActionMenuItem {
     Damage,
     Heal,
     AddStatus,
@@ -62,7 +62,7 @@ pub(super) fn handle_action_menu_mode(app: &mut App, key: KeyEvent, selected_ind
 }
 
 #[derive(Clone, Copy)]
-enum CombatantMenuItem {
+pub(super) enum CombatantMenuItem {
     AddCombatant,
     RemoveCombatant,
     LoadTemplate,

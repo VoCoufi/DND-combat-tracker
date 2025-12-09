@@ -1,3 +1,5 @@
+#![allow(clippy::implicit_saturating_sub)]
+
 use ratatui::{
     Frame,
     style::{Color, Modifier, Style},

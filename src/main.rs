@@ -1,3 +1,5 @@
+#![allow(clippy::collapsible_if)]
+
 mod app;
 mod combat;
 mod models;
@@ -8,12 +10,12 @@ use std::io;
 use std::time::Duration;
 
 use anyhow::Result;
-use log::error;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event},
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
+use log::error;
 use ratatui::{
     Terminal,
     backend::{Backend, CrosstermBackend},

@@ -378,16 +378,18 @@ impl App {
             return Err("Invalid template selection".to_string());
         }
         let tpl = self.templates[template_index].clone();
-        let mut state = AddCombatantState::default();
-        state.name = tpl.name.clone();
-        state.hp = tpl.hp_max.to_string();
-        state.ac = tpl.armor_class.to_string();
-        state.is_player = if tpl.is_player {
-            "y".to_string()
-        } else {
-            "n".to_string()
+        let state = AddCombatantState {
+            name: tpl.name.clone(),
+            hp: tpl.hp_max.to_string(),
+            ac: tpl.armor_class.to_string(),
+            is_player: if tpl.is_player {
+                "y".to_string()
+            } else {
+                "n".to_string()
+            },
+            step: 1, // next prompt will be initiative
+            ..Default::default()
         };
-        state.step = 1; // next prompt will be initiative
         self.input_mode = InputMode::AddingCombatant(state);
         self.set_message(format!("Set initiative for template: {}", tpl.name));
         Ok(())
@@ -442,7 +444,9 @@ impl App {
             .chars()
             .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
         {
-            return Err("Filename can only contain letters, numbers, underscore, and hyphen".to_string());
+            return Err(
+                "Filename can only contain letters, numbers, underscore, and hyphen".to_string(),
+            );
         }
 
         match save_encounter(&self.encounter, &self.log, &filename) {
@@ -489,12 +493,13 @@ impl App {
         }
 
         // Validate filename characters
-        if !state.name
+        if !state
+            .name
             .chars()
             .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
         {
             return Err(
-                "Name can only contain letters, numbers, underscore, and hyphen".to_string()
+                "Name can only contain letters, numbers, underscore, and hyphen".to_string(),
             );
         }
 
@@ -551,10 +556,7 @@ impl App {
 
         match save_library_template(&template, &state.name) {
             Ok(()) => {
-                self.set_message(format!(
-                    "Successfully saved to library: {}",
-                    state.name
-                ));
+                self.set_message(format!("Successfully saved to library: {}", state.name));
                 self.input_mode = InputMode::Normal;
                 Ok(())
             }
@@ -584,9 +586,7 @@ impl App {
         } else {
             // Need confirmation
             self.input_mode = InputMode::ConfirmingLibraryLoad(filename);
-            self.set_message(
-                "This will clear the current encounter. Continue? (y/n)".to_string(),
-            );
+            self.set_message("This will clear the current encounter. Continue? (y/n)".to_string());
             Ok(())
         }
     }
@@ -914,7 +914,8 @@ mod tests {
         let list = app.list_saved_encounters();
 
         // Verify alphabetical sorting
-        let test_files: Vec<&String> = list.iter()
+        let test_files: Vec<&String> = list
+            .iter()
             .filter(|name| name.contains(&timestamp.to_string()))
             .collect();
 
@@ -949,12 +950,13 @@ mod tests {
         // Add complex state
         app.encounter.combatants[0].hp_current = 15;
         app.encounter.combatants[0].temp_hp = 5;
-        app.encounter.combatants[0].add_status_effect(
-            StatusEffect::new(ConditionType::Poisoned, 10, None)
-        );
-        app.encounter.combatants[0].set_concentration(
-            ConcentrationInfo::new("Shield".to_string(), 3)
-        );
+        app.encounter.combatants[0].add_status_effect(StatusEffect::new(
+            ConditionType::Poisoned,
+            10,
+            None,
+        ));
+        app.encounter.combatants[0]
+            .set_concentration(ConcentrationInfo::new("Shield".to_string(), 3));
 
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -966,7 +968,9 @@ mod tests {
         app.complete_save_encounter(test_filename.clone()).unwrap();
 
         let mut new_app = App::new();
-        new_app.complete_load_encounter(test_filename.clone()).unwrap();
+        new_app
+            .complete_load_encounter(test_filename.clone())
+            .unwrap();
 
         // Verify all state
         let combatant = &new_app.encounter.combatants[0];
@@ -974,9 +978,15 @@ mod tests {
         assert_eq!(combatant.hp_current, 15);
         assert_eq!(combatant.temp_hp, 5);
         assert_eq!(combatant.status_effects.len(), 1);
-        assert_eq!(combatant.status_effects[0].condition, ConditionType::Poisoned);
+        assert_eq!(
+            combatant.status_effects[0].condition,
+            ConditionType::Poisoned
+        );
         assert!(combatant.concentration.is_some());
-        assert_eq!(combatant.concentration.as_ref().unwrap().spell_name, "Shield");
+        assert_eq!(
+            combatant.concentration.as_ref().unwrap().spell_name,
+            "Shield"
+        );
 
         // Cleanup
         let path = format!("{}/{}.json", encounters_dir(), test_filename);
@@ -1181,7 +1191,10 @@ mod tests {
 
         let template = loaded_template.unwrap();
         assert_eq!(template.name, test_name);
-        assert_eq!(template.description, "Test encounter with dragon and kobold");
+        assert_eq!(
+            template.description,
+            "Test encounter with dragon and kobold"
+        );
         assert_eq!(template.difficulty, "Hard");
         assert_eq!(template.combatants.len(), 2);
 
@@ -1212,13 +1225,13 @@ mod tests {
             spell_name: "Bless".to_string(),
             constitution_modifier: 2,
         });
-        app.encounter.combatants[0].status_effects.push(
-            crate::models::StatusEffect::new(
+        app.encounter.combatants[0]
+            .status_effects
+            .push(crate::models::StatusEffect::new(
                 crate::models::ConditionType::Poisoned,
                 3,
                 None,
-            )
-        );
+            ));
 
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -1330,7 +1343,8 @@ mod tests {
         }
 
         // Verify list is sorted
-        let test_entries: Vec<_> = list.iter()
+        let test_entries: Vec<_> = list
+            .iter()
             .filter(|n| n.starts_with("test_list_"))
             .collect();
         let mut sorted = test_entries.clone();
@@ -1382,7 +1396,10 @@ mod tests {
         assert!(result2.is_ok());
 
         // Should be in confirmation mode
-        assert!(matches!(app.input_mode, InputMode::ConfirmingLibraryOverwrite(_)));
+        assert!(matches!(
+            app.input_mode,
+            InputMode::ConfirmingLibraryOverwrite(_)
+        ));
         assert!(app.message.as_ref().unwrap().contains("already exists"));
         assert!(app.message.as_ref().unwrap().contains("Overwrite?"));
 

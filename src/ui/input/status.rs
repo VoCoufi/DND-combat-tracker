@@ -1,4 +1,8 @@
-use crate::app::{App, ClearAction, ConditionSelectionState, InputMode, SelectionState, StatusSelectionState};
+#![allow(clippy::collapsible_else_if)]
+
+use crate::app::{
+    App, ClearAction, ConditionSelectionState, InputMode, SelectionState, StatusSelectionState,
+};
 use crossterm::event::{KeyCode, KeyEvent};
 
 use super::combat::update_selection_state;

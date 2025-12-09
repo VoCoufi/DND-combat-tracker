@@ -32,7 +32,7 @@ pub enum InputMode {
     ConfirmingLibraryLoad(String), // stores template name
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct AddCombatantState {
     pub step: usize, // 0: name, 1: initiative, 2: hp, 3: ac, 4: is_player
     pub name: String,
@@ -42,32 +42,10 @@ pub struct AddCombatantState {
     pub is_player: String,
 }
 
-impl Default for AddCombatantState {
-    fn default() -> Self {
-        Self {
-            step: 0,
-            name: String::new(),
-            initiative: String::new(),
-            hp: String::new(),
-            ac: String::new(),
-            is_player: String::new(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct SelectionState {
     pub selected_index: usize,
     pub input: String,
-}
-
-impl Default for SelectionState {
-    fn default() -> Self {
-        Self {
-            selected_index: 0,
-            input: String::new(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -76,23 +54,12 @@ pub struct ConditionSelectionState {
     pub input: String,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct AddConcentrationState {
     pub combatant_index: usize,
     pub step: usize, // 0: spell name, 1: con mod
     pub spell_name: String,
     pub con_mod: String,
-}
-
-impl Default for AddConcentrationState {
-    fn default() -> Self {
-        Self {
-            combatant_index: 0,
-            step: 0,
-            spell_name: String::new(),
-            con_mod: String::new(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -116,9 +83,10 @@ pub struct StatusSelectionState {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SaveEncounterState {
-    pub input: String,  // filename
+    pub input: String, // filename
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for SaveEncounterState {
     fn default() -> Self {
         Self {
@@ -128,23 +96,12 @@ impl Default for SaveEncounterState {
 }
 
 /// State for saving encounter to library (3-step process)
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct SaveLibraryState {
     pub step: usize, // 0: name, 1: description, 2: difficulty
     pub name: String,
     pub description: String,
     pub difficulty: String,
-}
-
-impl Default for SaveLibraryState {
-    fn default() -> Self {
-        Self {
-            step: 0,
-            name: String::new(),
-            description: String::new(),
-            difficulty: String::new(),
-        }
-    }
 }
 
 /// State for loading library and setting initiatives

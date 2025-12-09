@@ -1,8 +1,25 @@
 [package]
 name = "dnd-combat-tracker"
-version = "0.1.0"
+version = "0.5.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
+authors = ["VoCoufi <vojtech.cou@gmail.com>"]
+description = "Terminal-based combat encounter tracker for D&D 5e"
+repository = "https://github.com/VoCoufi/DND-combat-tracker"
+homepage = "https://github.com/VoCoufi/DND-combat-tracker"
+documentation = "https://github.com/VoCoufi/DND-combat-tracker#readme"
+keywords = ["dnd", "dungeons-dragons", "combat", "tracker", "tui"]
+categories = ["command-line-utilities", "games"]
+readme = "README.md"
+exclude = [
+    "target/",
+    ".git/",
+    ".github/",
+    "encounters/",
+    "library/",
+    "templates.json",
+    "error_log.txt",
+]
 
 [dependencies]
 ratatui = "0.29"

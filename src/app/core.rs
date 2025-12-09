@@ -1,7 +1,7 @@
+use super::persistence::*;
+use super::state::*;
 use crate::combat::CombatEncounter;
 use crate::models::{CombatantTemplate, LogEntry};
-use super::state::*;
-use super::persistence::*;
 
 pub struct App {
     pub encounter: CombatEncounter,

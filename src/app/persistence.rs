@@ -150,14 +150,12 @@ pub fn list_encounter_files() -> Result<Vec<String>, String> {
     })?;
 
     let mut files = Vec::new();
-    for entry in entries {
-        if let Ok(entry) = entry {
-            if let Some(filename) = entry.file_name().to_str() {
-                if filename.ends_with(".json") {
-                    // Remove .json extension
-                    let name = filename.trim_end_matches(".json").to_string();
-                    files.push(name);
-                }
+    for entry in entries.flatten() {
+        if let Some(filename) = entry.file_name().to_str() {
+            if filename.ends_with(".json") {
+                // Remove .json extension
+                let name = filename.trim_end_matches(".json").to_string();
+                files.push(name);
             }
         }
     }
@@ -231,14 +229,12 @@ pub fn list_library_files() -> Result<Vec<String>, String> {
     })?;
 
     let mut files = Vec::new();
-    for entry in entries {
-        if let Ok(entry) = entry {
-            if let Some(filename) = entry.file_name().to_str() {
-                if filename.ends_with(".json") {
-                    // Remove .json extension
-                    let name = filename.trim_end_matches(".json").to_string();
-                    files.push(name);
-                }
+    for entry in entries.flatten() {
+        if let Some(filename) = entry.file_name().to_str() {
+            if filename.ends_with(".json") {
+                // Remove .json extension
+                let name = filename.trim_end_matches(".json").to_string();
+                files.push(name);
             }
         }
     }

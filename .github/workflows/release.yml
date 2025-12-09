@@ -1,0 +1,167 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86_64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: dnd-combat-tracker
+            asset_name: dnd-combat-tracker-linux-x86_64
+            archive_format: tar.gz
+
+          # macOS x86_64 (Intel)
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_name: dnd-combat-tracker
+            asset_name: dnd-combat-tracker-macos-x86_64
+            archive_format: tar.gz
+
+          # macOS aarch64 (Apple Silicon)
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: dnd-combat-tracker
+            asset_name: dnd-combat-tracker-macos-aarch64
+            archive_format: tar.gz
+
+          # Windows x86_64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: dnd-combat-tracker.exe
+            asset_name: dnd-combat-tracker-windows-x86_64
+            archive_format: zip
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }} --verbose
+
+      - name: Strip binary (Linux and macOS)
+        if: matrix.os != 'windows-latest'
+        run: strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+
+      - name: Create archive (Unix)
+        if: matrix.archive_format == 'tar.gz'
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar -czf ${{ matrix.asset_name }}.tar.gz ${{ matrix.artifact_name }}
+          mv ${{ matrix.asset_name }}.tar.gz ${{ github.workspace }}/
+
+      - name: Create archive (Windows)
+        if: matrix.archive_format == 'zip'
+        shell: pwsh
+        run: |
+          cd target/${{ matrix.target }}/release
+          Compress-Archive -Path ${{ matrix.artifact_name }} -DestinationPath ${{ github.workspace }}/${{ matrix.asset_name }}.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: |
+            ${{ matrix.asset_name }}.tar.gz
+            ${{ matrix.asset_name }}.zip
+          if-no-files-found: error
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec cp {} release-assets/ \;
+          ls -lh release-assets/
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ## Installation
+
+            Download the appropriate binary for your operating system:
+
+            - **Linux**: `dnd-combat-tracker-linux-x86_64.tar.gz`
+            - **macOS (Intel)**: `dnd-combat-tracker-macos-x86_64.tar.gz`
+            - **macOS (Apple Silicon)**: `dnd-combat-tracker-macos-aarch64.tar.gz`
+            - **Windows**: `dnd-combat-tracker-windows-x86_64.zip`
+
+            ### Extract and Run
+
+            **Linux/macOS:**
+            ```bash
+            tar -xzf dnd-combat-tracker-*.tar.gz
+            ./dnd-combat-tracker
+            ```
+
+            **Windows:**
+            - Extract the ZIP file
+            - Run `dnd-combat-tracker.exe`
+
+            ---
+
+            See [CHANGELOG.md](https://github.com/VoCoufi/DND-combat-tracker/blob/master/CHANGELOG.md) for detailed changes.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

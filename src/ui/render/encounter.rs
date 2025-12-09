@@ -1,3 +1,5 @@
+#![allow(clippy::if_same_then_else)]
+
 use ratatui::{
     Frame,
     layout::Rect,
@@ -164,13 +166,12 @@ pub fn format_condition_effects(status_effects: &[StatusEffect]) -> Vec<Line<'st
     status_effects
         .iter()
         .map(|effect| {
-            let effect_text = format!("    ⚬ {}: {}",
+            let effect_text = format!(
+                "    ⚬ {}: {}",
                 effect.condition.as_str(),
                 effect.condition.mechanical_effects()
             );
-            Line::from(vec![
-                Span::styled(effect_text, effect_style)
-            ])
+            Line::from(vec![Span::styled(effect_text, effect_style)])
         })
         .collect()
 }
@@ -220,7 +221,11 @@ mod tests {
 
         for condition in all_conditions {
             let desc = condition.description();
-            assert!(!desc.is_empty(), "Condition {:?} has no description", condition);
+            assert!(
+                !desc.is_empty(),
+                "Condition {:?} has no description",
+                condition
+            );
         }
     }
 }

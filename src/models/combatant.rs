@@ -67,6 +67,7 @@ impl Combatant {
         }
     }
 
+    #[allow(dead_code)]
     pub fn remove_status_effect(&mut self, index: usize) {
         if index < self.status_effects.len() {
             self.status_effects.remove(index);

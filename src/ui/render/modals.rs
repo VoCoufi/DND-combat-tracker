@@ -1,3 +1,5 @@
+#![allow(clippy::implicit_saturating_sub)]
+
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
@@ -781,10 +783,7 @@ pub fn render_library_initiative_modal(f: &mut Frame, state: &LoadLibraryState, 
                 .fg(Color::Cyan)
                 .add_modifier(Modifier::BOLD),
         )),
-        Line::from(Span::styled(
-            progress,
-            Style::default().fg(Color::DarkGray),
-        )),
+        Line::from(Span::styled(progress, Style::default().fg(Color::DarkGray))),
         Line::from(""),
         Line::from(vec![
             Span::raw("Combatant: "),

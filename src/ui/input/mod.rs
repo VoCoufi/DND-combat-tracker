@@ -1,5 +1,5 @@
-mod combatant;
 mod combat;
+mod combatant;
 mod entry;
 mod menus;
 mod normal;

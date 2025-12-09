@@ -1,13 +1,15 @@
 use crate::app::{AddConcentrationState, App, InputMode, StatusSelectionState};
 use crossterm::event::KeyEvent;
 
-use super::combatant::{
-    handle_add_combatant_mode, handle_removing_mode, handle_template_selection_mode,
-};
 use super::combat::{
     handle_add_concentration_mode, handle_concentration_check_mode, handle_selection_mode,
 };
-use super::menus::{handle_action_menu_mode, handle_combatant_menu_mode, handle_quick_reference_mode};
+use super::combatant::{
+    handle_add_combatant_mode, handle_removing_mode, handle_template_selection_mode,
+};
+use super::menus::{
+    handle_action_menu_mode, handle_combatant_menu_mode, handle_quick_reference_mode,
+};
 use super::normal::handle_normal_mode;
 use super::persistence::{
     handle_confirm_library_load, handle_confirm_library_overwrite, handle_load_encounter_mode,

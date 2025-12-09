@@ -1,5 +1,10 @@
 # D&D 5e Combat Tracker
 
+![CI](https://github.com/VoCoufi/DND-combat-tracker/workflows/CI/badge.svg)
+![Release](https://github.com/VoCoufi/DND-combat-tracker/workflows/Release/badge.svg)
+![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)
+![Version](https://img.shields.io/badge/version-0.5.0-green)
+
 A feature-rich, terminal-based combat encounter tracker for Dungeons & Dragons 5th Edition, built with Rust. Manage initiative, HP, conditions, death saves, concentration, and more with an intuitive keyboard-driven interface powered by `ratatui`.
 
 ## Features
@@ -43,23 +48,52 @@ A feature-rich, terminal-based combat encounter tracker for Dungeons & Dragons 5
 
 ## Installation
 
-### Prerequisites
+### Option 1: Download Prebuilt Binary (Recommended)
 
+The easiest way to get started is to download a prebuilt binary for your operating system:
+
+1. Visit the [Releases page](https://github.com/VoCoufi/DND-combat-tracker/releases)
+2. Download the appropriate binary for your OS:
+   - **Linux**: `dnd-combat-tracker-linux-x86_64.tar.gz`
+   - **macOS (Intel)**: `dnd-combat-tracker-macos-x86_64.tar.gz`
+   - **macOS (Apple Silicon)**: `dnd-combat-tracker-macos-aarch64.tar.gz`
+   - **Windows**: `dnd-combat-tracker-windows-x86_64.zip`
+
+3. Extract and run:
+
+   **Linux/macOS:**
+   ```bash
+   tar -xzf dnd-combat-tracker-*.tar.gz
+   ./dnd-combat-tracker
+   ```
+
+   **Windows:**
+   - Extract the ZIP file
+   - Run `dnd-combat-tracker.exe`
+
+### Option 2: Build from Source
+
+If you have Rust installed, you can build from source:
+
+**Prerequisites:**
 - **Rust**: 1.90.0 or later ([install here](https://rustup.rs/))
 - **Terminal**: Any terminal supporting ANSI colors (most modern terminals)
 
-### Build from Source
-
+**Build and run:**
 ```bash
-git clone <repository-url>
-cd dnd-combat-tracker
+git clone https://github.com/VoCoufi/DND-combat-tracker.git
+cd DND-combat-tracker
 cargo build --release
+./target/release/dnd-combat-tracker
 ```
 
-### Run
+### Option 3: Install with Cargo
+
+If you have Rust installed, you can install directly from the repository:
 
 ```bash
-cargo run --release
+cargo install --git https://github.com/VoCoufi/DND-combat-tracker
+dnd-combat-tracker
 ```
 
 ## Quick Start
