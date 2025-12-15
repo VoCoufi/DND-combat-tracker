@@ -3,7 +3,7 @@
 ![CI](https://github.com/VoCoufi/DND-combat-tracker/workflows/CI/badge.svg)
 ![Release](https://github.com/VoCoufi/DND-combat-tracker/workflows/Release/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)
-![Version](https://img.shields.io/badge/version-0.5.0-green)
+![Version](https://img.shields.io/badge/version-0.6.0-green)
 
 A feature-rich, terminal-based combat encounter tracker for Dungeons & Dragons 5th Edition, built with Rust. Manage initiative, HP, conditions, death saves, concentration, and more with an intuitive keyboard-driven interface powered by `ratatui`.
 

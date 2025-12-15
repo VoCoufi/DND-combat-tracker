@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2024-12-15
+
+### Added
+- Installation script for Linux/macOS (`install.sh`)
+  - Auto-detects OS and architecture
+  - SHA256 checksum verification
+  - Installs to `~/.local/bin` by default
+  - Supports `--uninstall` flag
+- SHA256 checksums in GitHub releases
+
 ## [0.5.0] - 2024-12-09
 
 ### Added
