@@ -127,6 +127,13 @@ jobs:
           find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec cp {} release-assets/ \;
           ls -lh release-assets/
 
+      - name: Generate checksums
+        run: |
+          cd release-assets
+          sha256sum *.tar.gz *.zip > checksums.txt
+          echo "Generated checksums:"
+          cat checksums.txt
+
       - name: Extract version from tag
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT

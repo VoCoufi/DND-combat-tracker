@@ -9,6 +9,16 @@ A feature-rich, terminal-based combat encounter tracker for Dungeons & Dragons 5
 
 ## Installation
 
+### Quick Install (Linux/macOS)
+
+The fastest way to install is with the install script:
+
+```bash
+curl -sSL https://github.com/VoCoufi/DND-combat-tracker/raw/master/install.sh | sh
+```
+
+This automatically detects your OS and architecture, downloads the appropriate binary, verifies the checksum, and installs to `~/.local/bin`.
+
 ### Option 1: Download Prebuilt Binary (Recommended)
 
 The easiest way to get started is to download a prebuilt binary for your operating system:
